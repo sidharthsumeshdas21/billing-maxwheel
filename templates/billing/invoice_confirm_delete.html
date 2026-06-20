@@ -3,23 +3,30 @@
 {% block topbar_title %}Delete Invoice{% endblock %}
 
 {% block content %}
-<div class="confirm-card card">
-  <div class="card-header">
-    <span class="card-title" style="color:var(--danger)">⚠️ Delete Invoice</span>
-  </div>
-  <div class="card-body">
-    <p style="color:var(--text-300); margin-bottom:16px">
-      Are you sure you want to delete invoice <strong class="text-orange">{{ invoice.invoice_number }}</strong>
-      for <strong>{{ invoice.customer.name }}</strong>?
-      <br><br>
-      <span style="color:var(--danger); font-size:0.85rem">This action cannot be undone. All line items will also be deleted.</span>
-    </p>
-    <div class="flex gap-2">
-      <form method="post">
-        {% csrf_token %}
-        <button type="submit" class="btn btn-danger">🗑 Yes, Delete</button>
-      </form>
-      <a href="{% url 'invoice_detail' invoice.pk %}" class="btn btn-secondary">Cancel</a>
+<div class="confirm-box">
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title" style="color:var(--red)">Delete Invoice</span>
+    </div>
+    <div class="card-body">
+      <p style="color:var(--t-200); margin-bottom:8px; font-size:0.9rem">
+        Are you sure you want to delete invoice
+        <strong style="color:var(--orange)">{{ invoice.invoice_number }}</strong>
+        for <strong>{{ invoice.customer.name }}</strong>?
+      </p>
+      <p style="color:var(--red); font-size:0.8rem; margin-bottom:22px">
+        This action is permanent. All line items for this invoice will also be deleted.
+      </p>
+      <div class="flex gap-2">
+        <form method="post">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-danger">
+            <svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+            Yes, Delete
+          </button>
+        </form>
+        <a href="{% url 'invoice_detail' invoice.pk %}" class="btn btn-secondary">Cancel</a>
+      </div>
     </div>
   </div>
 </div>

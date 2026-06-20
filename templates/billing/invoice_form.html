@@ -4,12 +4,21 @@
 
 {% block content %}
 <div class="page-header">
-  <h1>{{ title }}</h1>
-  <div class="flex gap-2">
+  <div>
+    <h1>{{ title }}</h1>
+    <div class="sub">Fill in the details below and add line items</div>
+  </div>
+  <div class="page-header-actions">
     {% if invoice %}
-    <a href="{% url 'invoice_detail' invoice.pk %}" class="btn btn-secondary">← Back</a>
+    <a href="{% url 'invoice_detail' invoice.pk %}" class="btn btn-secondary">
+      <svg viewBox="0 0 24 24"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+      Back
+    </a>
     {% else %}
-    <a href="{% url 'invoice_list' %}" class="btn btn-secondary">← Invoices</a>
+    <a href="{% url 'invoice_list' %}" class="btn btn-secondary">
+      <svg viewBox="0 0 24 24"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+      Invoices
+    </a>
     {% endif %}
   </div>
 </div>
@@ -17,41 +26,43 @@
 <form method="post" id="invoice-form">
   {% csrf_token %}
 
-  <!-- Invoice Details -->
+  <!-- Invoice Info -->
   <div class="card mb-4">
-    <div class="card-header"><span class="card-title">Invoice Details</span></div>
+    <div class="card-header">
+      <span class="card-title">Invoice Details</span>
+    </div>
     <div class="card-body">
       <div class="form-grid">
         <div class="form-group">
-          <label class="form-label" for="{{ form.invoice_number.id_for_label }}">Invoice Number</label>
+          <label class="form-label" for="{{ form.invoice_number.id_for_label }}">Invoice Number <span class="req">*</span></label>
           {{ form.invoice_number }}
           {% if form.invoice_number.errors %}<div class="form-error">{{ form.invoice_number.errors|join:", " }}</div>{% endif %}
         </div>
         <div class="form-group">
-          <label class="form-label" for="{{ form.invoice_date.id_for_label }}">Invoice Date</label>
+          <label class="form-label" for="{{ form.invoice_date.id_for_label }}">Invoice Date <span class="req">*</span></label>
           {{ form.invoice_date }}
           {% if form.invoice_date.errors %}<div class="form-error">{{ form.invoice_date.errors|join:", " }}</div>{% endif %}
         </div>
         <div class="form-group">
-          <label class="form-label" for="{{ form.customer.id_for_label }}">Customer</label>
+          <label class="form-label" for="{{ form.customer.id_for_label }}">Customer <span class="req">*</span></label>
           {{ form.customer }}
           {% if form.customer.errors %}<div class="form-error">{{ form.customer.errors|join:", " }}</div>{% endif %}
         </div>
         <div class="form-group">
-          <label class="form-label" for="{{ form.car_number.id_for_label }}">Car Number</label>
+          <label class="form-label" for="{{ form.car_number.id_for_label }}">Vehicle Number</label>
           {{ form.car_number }}
         </div>
         <div class="form-group">
-          <label class="form-label" for="{{ form.car_model.id_for_label }}">Car Model</label>
+          <label class="form-label" for="{{ form.car_model.id_for_label }}">Vehicle Model</label>
           {{ form.car_model }}
         </div>
         <div class="form-group">
-          <label class="form-label" for="{{ form.discount.id_for_label }}">Discount (₹)</label>
+          <label class="form-label" for="{{ form.discount.id_for_label }}">Discount (&#8377;)</label>
           {{ form.discount }}
         </div>
       </div>
-      <div class="form-group mt-4">
-        <label class="form-label" for="{{ form.notes.id_for_label }}">Notes (optional)</label>
+      <div class="form-group mt-4" style="margin-top:14px">
+        <label class="form-label" for="{{ form.notes.id_for_label }}">Notes</label>
         {{ form.notes }}
       </div>
     </div>
@@ -61,148 +72,182 @@
   <div class="card mb-4">
     <div class="card-header">
       <span class="card-title">Line Items</span>
-      <span class="text-muted" style="font-size:0.8rem">Add products or services</span>
+      <span class="text-dim" style="font-size:0.78rem">At least one item required</span>
     </div>
-    <div class="card-body" style="padding-bottom:12px">
+    <div class="card-body" style="padding-bottom:14px">
       {{ formset.management_form }}
+
+      {% if formset.non_form_errors %}
+      <div class="message error mb-3" style="margin-bottom:12px">{{ formset.non_form_errors|join:", " }}</div>
+      {% endif %}
+
       <div class="table-wrap">
         <table class="li-table" id="li-table">
           <thead>
             <tr>
-              <th style="width:40px">#</th>
-              <th>Product / Service</th>
+              <th style="width:36px">#</th>
+              <th>Description / Product</th>
               <th style="width:90px">Qty</th>
               <th style="width:80px">Unit</th>
-              <th style="width:110px">Rate (₹)</th>
-              <th style="width:100px" class="text-right">Amount (₹)</th>
-              <th style="width:40px"></th>
+              <th style="width:110px">Rate (&#8377;)</th>
+              <th class="th-right" style="width:110px">Amount (&#8377;)</th>
+              <th style="width:36px"></th>
             </tr>
           </thead>
           <tbody id="li-body">
             {% for li_form in formset %}
-            <tr class="li-row {% if li_form.DELETE.value %}d-none{% endif %}" data-row="{{ forloop.counter0 }}">
-              <td class="text-muted li-sr" style="font-size:0.85rem">{{ forloop.counter }}</td>
+            <tr class="li-row {% if li_form.DELETE.value %}d-none{% endif %}">
+              <td class="td-sr">{{ forloop.counter }}</td>
               <td>{{ li_form.product_name }}</td>
               <td>{{ li_form.quantity }}</td>
               <td>{{ li_form.unit }}</td>
               <td>{{ li_form.rate }}</td>
-              <td class="li-amount">—</td>
-              <td>
-                {{ li_form.DELETE }}
+              <td class="td-amount">—</td>
+              <td class="td-del">
+                <div style="display:none">{{ li_form.DELETE }}</div>
                 {% if li_form.id %}{{ li_form.id }}{% endif %}
-                <button type="button" class="li-del-btn" data-row="{{ forloop.counter0 }}">✕</button>
+                <button type="button" class="li-del-btn" title="Remove row">
+                  <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
               </td>
             </tr>
             {% endfor %}
           </tbody>
         </table>
       </div>
-      <button type="button" id="add-line-btn">➕ Add Item</button>
+
+      <button type="button" id="add-line-btn" class="add-row-btn">
+        <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Add Line Item
+      </button>
     </div>
   </div>
 
-  <!-- Totals & Submit -->
-  <div style="display:flex; justify-content:flex-end; gap:16px; align-items:flex-start; flex-wrap:wrap">
-    <div class="totals-box">
+  <!-- Totals + Actions -->
+  <div style="display:flex; justify-content:flex-end; align-items:flex-start; gap:16px; flex-wrap:wrap">
+    <div class="totals-panel">
       <div class="totals-row">
-        <span>Subtotal</span>
-        <span id="subtotal-disp">₹0.00</span>
+        <span class="tr-label">Subtotal</span>
+        <span class="tr-val" id="subtotal-disp">&#8377;0.00</span>
       </div>
       <div class="totals-row">
-        <span>Discount</span>
-        <span id="discount-disp">₹0.00</span>
+        <span class="tr-label">Discount</span>
+        <span class="tr-val" id="discount-disp">&#8377;0.00</span>
       </div>
       <div class="totals-row grand">
-        <span>Total</span>
-        <span id="total-disp">₹0.00</span>
+        <span class="tr-label">Total</span>
+        <span class="tr-val" id="total-disp">&#8377;0.00</span>
       </div>
     </div>
-    <div style="display:flex; flex-direction:column; gap:8px; justify-content:flex-end">
-      <button type="submit" class="btn btn-primary btn-lg">💾 {{ action }} Invoice</button>
+
+    <div style="display:flex;flex-direction:column;gap:8px;min-width:160px">
+      <button type="submit" class="btn btn-primary btn-lg" style="justify-content:center">
+        <svg viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+        {{ action }} Invoice
+      </button>
       {% if invoice %}
-      <a href="{% url 'invoice_delete' invoice.pk %}" class="btn btn-danger btn-sm" style="justify-content:center">🗑 Delete</a>
+      <a href="{% url 'invoice_delete' invoice.pk %}" class="btn btn-danger btn-sm" style="justify-content:center">
+        <svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+        Delete Invoice
+      </a>
       {% endif %}
     </div>
   </div>
+
 </form>
 {% endblock %}
 
 {% block extra_js %}
 <script>
 (function () {
-  const TOTAL_FORMS_INPUT = document.querySelector('[name$=TOTAL_FORMS]');
+  const TOTAL_INPUT = document.querySelector('[name$="-TOTAL_FORMS"]');
   const tbody = document.getElementById('li-body');
+
+  function fmt(n) { return '\u20B9' + n.toFixed(2); }
 
   function recalc() {
     let subtotal = 0;
-    let visibleIndex = 1;
-    document.querySelectorAll('.li-row').forEach(row => {
-      const del = row.querySelector('[name$=DELETE]');
-      if (del && del.checked) { row.classList.add('d-none'); return; }
-      if (row.classList.contains('d-none') && !(del && del.checked)) return;
+    let idx = 1;
+    tbody.querySelectorAll('.li-row').forEach(function(row) {
+      // Check if marked for deletion
+      const delChk = row.querySelector('[name$="-DELETE"]');
+      if (delChk && delChk.checked) { row.classList.add('d-none'); return; }
+      if (row.classList.contains('d-none')) return;
 
-      const qty = parseFloat(row.querySelector('.li-qty')?.value) || 0;
-      const rate = parseFloat(row.querySelector('.li-rate')?.value) || 0;
-      const amt = qty * rate;
+      const qtyEl  = row.querySelector('[name$="-quantity"]');
+      const rateEl = row.querySelector('[name$="-rate"]');
+      const amtEl  = row.querySelector('.td-amount');
+      const srEl   = row.querySelector('.td-sr');
+
+      const qty  = parseFloat(qtyEl  ? qtyEl.value  : 0) || 0;
+      const rate = parseFloat(rateEl ? rateEl.value : 0) || 0;
+      const amt  = qty * rate;
       subtotal += amt;
-      row.querySelector('.li-amount').textContent = '₹' + amt.toFixed(2);
-      row.querySelector('.li-sr').textContent = visibleIndex++;
+      if (amtEl) amtEl.textContent = amt > 0 ? fmt(amt) : '—';
+      if (srEl)  srEl.textContent  = idx;
+      idx++;
     });
-    const discount = parseFloat(document.querySelector('[name$=discount]')?.value) || 0;
-    document.getElementById('subtotal-disp').textContent = '₹' + subtotal.toFixed(2);
-    document.getElementById('discount-disp').textContent = '₹' + discount.toFixed(2);
-    document.getElementById('total-disp').textContent = '₹' + (subtotal - discount).toFixed(2);
+
+    const discEl = document.querySelector('[name$="-discount"], [name="discount"]');
+    const disc   = parseFloat(discEl ? discEl.value : 0) || 0;
+    document.getElementById('subtotal-disp').textContent = fmt(subtotal);
+    document.getElementById('discount-disp').textContent = fmt(disc);
+    document.getElementById('total-disp').textContent    = fmt(subtotal - disc);
   }
 
   // Delete row
-  document.addEventListener('click', function (e) {
-    if (e.target.matches('.li-del-btn')) {
-      const row = e.target.closest('.li-row');
-      const delCheck = row.querySelector('[name$=DELETE]');
-      if (delCheck) {
-        delCheck.checked = true;
-        row.classList.add('d-none');
-      } else {
-        row.remove();
-      }
+  tbody.addEventListener('click', function(e) {
+    const btn = e.target.closest('.li-del-btn');
+    if (!btn) return;
+    const row    = btn.closest('.li-row');
+    const delChk = row.querySelector('[name$="-DELETE"]');
+    if (delChk) {
+      delChk.checked = true;
+      row.classList.add('d-none');
+    } else {
+      row.remove();
+    }
+    recalc();
+  });
+
+  // Add new row
+  document.getElementById('add-line-btn').addEventListener('click', function() {
+    const total  = parseInt(TOTAL_INPUT.value);
+    const rows   = tbody.querySelectorAll('.li-row');
+    // Find a template row (use first row)
+    const tmpl   = rows[0];
+    const newRow = tmpl.cloneNode(true);
+
+    newRow.querySelectorAll('input, select, textarea').forEach(function(el) {
+      el.name = el.name.replace(/-\d+-/, '-' + total + '-');
+      el.id   = (el.id || '').replace(/-\d+-/, '-' + total + '-');
+      if (el.type !== 'hidden' && el.type !== 'checkbox') el.value = '';
+      if (el.type === 'checkbox') el.checked = false;
+    });
+
+    newRow.classList.remove('d-none');
+    const amtEl = newRow.querySelector('.td-amount');
+    if (amtEl) amtEl.textContent = '—';
+    const srEl = newRow.querySelector('.td-sr');
+    if (srEl) srEl.textContent = tbody.querySelectorAll('.li-row:not(.d-none)').length + 1;
+
+    tbody.appendChild(newRow);
+    TOTAL_INPUT.value = total + 1;
+
+    const firstInput = newRow.querySelector('input[name$="-product_name"]');
+    if (firstInput) firstInput.focus();
+    recalc();
+  });
+
+  // Live recalc
+  document.addEventListener('input', function(e) {
+    if (e.target.name && (e.target.name.endsWith('-quantity') ||
+        e.target.name.endsWith('-rate') || e.target.name === 'discount')) {
       recalc();
     }
   });
 
-  // Add row
-  document.getElementById('add-line-btn').addEventListener('click', function () {
-    const totalForms = parseInt(TOTAL_FORMS_INPUT.value);
-    const prefix = TOTAL_FORMS_INPUT.name.replace('-TOTAL_FORMS', '');
-
-    // Clone from the last row or first row template
-    const allRows = tbody.querySelectorAll('.li-row');
-    const lastRow = allRows[allRows.length - 1];
-    const newRow = lastRow.cloneNode(true);
-
-    // Update indices
-    newRow.querySelectorAll('input, select, textarea').forEach(el => {
-      el.name = el.name.replace(/-\d+-/, `-${totalForms}-`);
-      el.id = el.id.replace(/-\d+-/, `-${totalForms}-`);
-      if (el.type !== 'checkbox' && el.type !== 'hidden') el.value = '';
-      if (el.type === 'checkbox') el.checked = false;
-    });
-    newRow.classList.remove('d-none');
-    newRow.querySelector('.li-amount').textContent = '—';
-    newRow.querySelector('.li-sr').textContent = totalForms + 1;
-    newRow.dataset.row = totalForms;
-
-    tbody.appendChild(newRow);
-    TOTAL_FORMS_INPUT.value = totalForms + 1;
-    newRow.querySelector('.li-product')?.focus();
-    recalc();
-  });
-
-  // Live recalc on input
-  document.addEventListener('input', function (e) {
-    if (e.target.matches('.li-qty, .li-rate, [name$=discount]')) recalc();
-  });
-
-  recalc(); // Initial calc on page load
+  recalc();
 })();
 </script>
 {% endblock %}

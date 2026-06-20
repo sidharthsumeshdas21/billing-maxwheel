@@ -4,31 +4,47 @@
 
 {% block content %}
 <div class="page-header">
-  <h1>Dashboard</h1>
-  <a href="{% url 'invoice_create' %}" class="btn btn-primary">➕ New Invoice</a>
+  <div>
+    <h1>Dashboard</h1>
+    <div class="sub">FY {{ fy_label }} Overview</div>
+  </div>
+  <div class="page-header-actions">
+    <a href="{% url 'invoice_create' %}" class="btn btn-primary">
+      <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      New Invoice
+    </a>
+  </div>
 </div>
 
 <!-- Stats -->
 <div class="stats-grid">
   <div class="stat-card">
-    <div class="stat-icon orange">🧾</div>
+    <div class="stat-ico orange">
+      <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+    </div>
     <div>
       <div class="stat-label">Total Invoices</div>
       <div class="stat-value">{{ total_invoices }}</div>
     </div>
   </div>
+
   <div class="stat-card">
-    <div class="stat-icon blue">👥</div>
+    <div class="stat-ico blue">
+      <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+    </div>
     <div>
       <div class="stat-label">Total Customers</div>
       <div class="stat-value">{{ total_customers }}</div>
     </div>
   </div>
+
   <div class="stat-card">
-    <div class="stat-icon gold">₹</div>
+    <div class="stat-ico gold">
+      <svg viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+    </div>
     <div>
       <div class="stat-label">FY {{ fy_label }} Revenue</div>
-      <div class="stat-value">₹{{ fy_revenue|floatformat:0 }}</div>
+      <div class="stat-value">&#8377;{{ fy_revenue|floatformat:0 }}</div>
     </div>
   </div>
 </div>
@@ -37,33 +53,43 @@
 <div class="card">
   <div class="card-header">
     <span class="card-title">Recent Invoices</span>
-    <a href="{% url 'invoice_list' %}" class="btn btn-secondary btn-sm">View All →</a>
+    <a href="{% url 'invoice_list' %}" class="btn btn-ghost btn-sm">View All
+      <svg viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+    </a>
   </div>
+
   {% if recent_invoices %}
   <div class="table-wrap">
     <table class="data-table">
       <thead>
         <tr>
-          <th>Invoice #</th>
+          <th>Invoice No.</th>
           <th>Date</th>
           <th>Customer</th>
-          <th>Car</th>
+          <th>Vehicle</th>
           <th class="text-right">Amount</th>
-          <th>Actions</th>
+          <th style="width:120px">Actions</th>
         </tr>
       </thead>
       <tbody>
         {% for inv in recent_invoices %}
         <tr>
           <td><span class="badge badge-orange">{{ inv.invoice_number }}</span></td>
-          <td class="text-muted">{{ inv.invoice_date|date:"d M Y" }}</td>
-          <td class="fw-700">{{ inv.customer.name }}</td>
-          <td class="text-muted">{{ inv.car_number }}{% if inv.car_model %} · {{ inv.car_model }}{% endif %}</td>
-          <td class="text-right fw-700 text-orange">₹{{ inv.total|floatformat:2 }}</td>
+          <td class="text-dim">{{ inv.invoice_date|date:"d M Y" }}</td>
+          <td class="fw-600">{{ inv.customer.name }}</td>
+          <td class="text-dim">
+            {{ inv.car_number|default:"—" }}
+            {% if inv.car_model %}<br><span style="font-size:0.75rem">{{ inv.car_model }}</span>{% endif %}
+          </td>
+          <td class="text-right fw-700 text-orange text-mono">&#8377;{{ inv.total|floatformat:2 }}</td>
           <td>
             <div class="flex gap-2">
-              <a href="{% url 'invoice_detail' inv.pk %}" class="btn btn-secondary btn-sm">👁 View</a>
-              <a href="{% url 'invoice_print' inv.pk %}" class="btn btn-secondary btn-sm">🖨 Print</a>
+              <a href="{% url 'invoice_detail' inv.pk %}" class="btn btn-secondary btn-sm btn-icon" title="View">
+                <svg viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+              </a>
+              <a href="{% url 'invoice_print' inv.pk %}" class="btn btn-secondary btn-sm btn-icon" title="Print" target="_blank">
+                <svg viewBox="0 0 24 24"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+              </a>
             </div>
           </td>
         </tr>
@@ -73,10 +99,12 @@
   </div>
   {% else %}
   <div class="empty-state">
-    <div class="empty-icon">🧾</div>
+    <div class="empty-ico">
+      <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+    </div>
     <h3>No invoices yet</h3>
     <p>Create your first invoice to get started.</p>
-    <a href="{% url 'invoice_create' %}" class="btn btn-primary mt-4">➕ Create Invoice</a>
+    <a href="{% url 'invoice_create' %}" class="btn btn-primary">Create Invoice</a>
   </div>
   {% endif %}
 </div>

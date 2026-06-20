@@ -2,147 +2,188 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Invoice {{ invoice.invoice_number }} — MaxWheel Auto Services</title>
   {% load static %}
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Rajdhani:wght@600;700&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Rajdhani:wght@700&display=swap');
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
       font-family: 'Inter', sans-serif;
-      font-size: 12px;
-      color: #1a1a1a;
+      font-size: 11.5px;
+      color: #1a1d24;
       background: #fff;
-      padding: 0;
     }
 
+    /* ── Print controls (hidden when printing) ── */
+    .print-controls {
+      position: fixed;
+      top: 16px; right: 16px;
+      display: flex;
+      gap: 10px;
+      z-index: 100;
+    }
+
+    .ctrl-btn {
+      padding: 9px 18px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: 'Inter', sans-serif;
+      border: none;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .ctrl-btn-primary { background: #e8610a; color: #fff; }
+    .ctrl-btn-primary:hover { background: #c04d00; }
+    .ctrl-btn-back { background: #1a1d24; color: #fff; }
+    .ctrl-btn-back:hover { background: #111; }
+
+    /* ── Page ── */
     .page {
       width: 210mm;
       min-height: 297mm;
       margin: 0 auto;
-      padding: 12mm 14mm;
+      padding: 12mm 14mm 14mm;
       display: flex;
       flex-direction: column;
+      background: #fff;
     }
 
-    /* Header */
-    .header {
+    /* ── Header ── */
+    .inv-header {
       display: flex;
       justify-content: space-between;
       align-items: flex-start;
-      padding-bottom: 10px;
-      border-bottom: 3px solid #ff6400;
-      margin-bottom: 12px;
+      padding-bottom: 12px;
+      border-bottom: 2.5px solid #e8610a;
+      margin-bottom: 14px;
     }
 
-    .company-block .co-name {
+    .co-block { display: flex; align-items: flex-start; gap: 12px; }
+
+    .co-logo {
+      width: 54px;
+      height: 54px;
+      object-fit: contain;
+      flex-shrink: 0;
+    }
+
+    .co-text .co-name {
       font-family: 'Rajdhani', sans-serif;
-      font-size: 22px;
+      font-size: 20px;
       font-weight: 700;
-      color: #ff6400;
+      color: #e8610a;
       letter-spacing: 1.5px;
       line-height: 1;
     }
 
-    .company-block .co-tag {
-      font-size: 8px;
-      letter-spacing: 3px;
+    .co-text .co-tag {
+      font-size: 7.5px;
+      letter-spacing: 2.5px;
       color: #888;
       text-transform: uppercase;
       margin-top: 2px;
     }
 
-    .company-block .co-addr {
+    .co-text .co-addr {
       font-size: 9px;
       color: #555;
       margin-top: 6px;
-      line-height: 1.5;
+      line-height: 1.6;
     }
 
-    .invoice-meta { text-align: right; }
-    .invoice-meta .inv-title {
-      font-size: 18px;
-      font-weight: 700;
-      color: #1a1a1a;
-      letter-spacing: 1px;
+    .inv-title-block { text-align: right; }
+
+    .inv-title-block .title-word {
+      font-size: 15px;
+      font-weight: 800;
+      letter-spacing: 2px;
       text-transform: uppercase;
-    }
-    .invoice-meta .inv-no {
-      font-size: 14px;
-      font-weight: 700;
-      color: #ff6400;
-      margin-top: 4px;
-    }
-    .invoice-meta .inv-date {
-      font-size: 10px;
-      color: #555;
-      margin-top: 4px;
+      color: #1a1d24;
     }
 
-    /* Bill To / Car Info */
+    .inv-title-block .inv-num {
+      font-size: 13px;
+      font-weight: 700;
+      color: #e8610a;
+      margin-top: 5px;
+    }
+
+    .inv-title-block .inv-date {
+      font-size: 9.5px;
+      color: #666;
+      margin-top: 3px;
+    }
+
+    /* ── Bill To / Vehicle ── */
     .info-row {
       display: flex;
-      gap: 16px;
+      gap: 12px;
       margin-bottom: 12px;
     }
 
     .info-box {
       flex: 1;
-      background: #f8f8f8;
-      border: 1px solid #e0e0e0;
+      background: #f8f9fb;
+      border: 1px solid #e5e7eb;
       border-radius: 6px;
-      padding: 10px 12px;
+      padding: 9px 12px;
     }
 
-    .info-box .label {
-      font-size: 8px;
+    .info-box .lbl {
+      font-size: 7.5px;
       font-weight: 700;
       letter-spacing: 1.5px;
       text-transform: uppercase;
-      color: #888;
+      color: #999;
       margin-bottom: 4px;
     }
 
-    .info-box .value { font-size: 11px; font-weight: 600; color: #1a1a1a; line-height: 1.5; }
-    .info-box .sub   { font-size: 9px; color: #555; }
+    .info-box .val      { font-size: 10.5px; font-weight: 700; color: #1a1d24; line-height: 1.4; }
+    .info-box .val-sub  { font-size: 9px;    color: #555; margin-top: 1px; line-height: 1.5; }
 
-    /* Line Items Table */
+    /* ── Line Items Table ── */
     table {
       width: 100%;
       border-collapse: collapse;
       margin-bottom: 12px;
     }
 
-    thead tr {
-      background: #ff6400;
-      color: #fff;
-    }
+    thead tr { background: #e8610a; }
 
     thead th {
-      padding: 7px 10px;
-      font-size: 9px;
+      padding: 6px 9px;
+      font-size: 8px;
       font-weight: 700;
       letter-spacing: 0.8px;
       text-transform: uppercase;
+      color: #fff;
       text-align: left;
     }
 
-    thead th.right { text-align: right; }
+    thead th.r { text-align: right; }
 
     tbody tr:nth-child(even) { background: #fafafa; }
 
     tbody td {
-      padding: 7px 10px;
-      font-size: 10.5px;
+      padding: 6px 9px;
+      font-size: 10px;
       border-bottom: 1px solid #f0f0f0;
-      color: #1a1a1a;
+      color: #1a1d24;
     }
 
-    tbody td.right { text-align: right; }
-    tbody td.bold  { font-weight: 600; }
+    tbody td.r    { text-align: right; }
+    tbody td.bold { font-weight: 600; }
+    tbody td.dim  { color: #666; }
 
-    /* Totals */
+    /* ── Totals ── */
     .totals-section {
       display: flex;
       justify-content: flex-end;
@@ -151,7 +192,7 @@
 
     .totals-box {
       width: 220px;
-      border: 1px solid #e0e0e0;
+      border: 1px solid #e5e7eb;
       border-radius: 6px;
       overflow: hidden;
     }
@@ -159,200 +200,198 @@
     .t-row {
       display: flex;
       justify-content: space-between;
+      align-items: center;
       padding: 6px 12px;
-      font-size: 11px;
+      font-size: 10.5px;
       border-bottom: 1px solid #f0f0f0;
     }
 
     .t-row:last-child { border-bottom: none; }
 
     .t-row.grand {
-      background: #ff6400;
+      background: #e8610a;
       color: #fff;
       font-weight: 700;
-      font-size: 13px;
-    }
-
-    /* Amount in words */
-    .amount-words {
-      background: #fff8f4;
-      border: 1px solid #ffd5b4;
-      border-radius: 6px;
+      font-size: 12px;
       padding: 8px 12px;
-      margin-bottom: 14px;
-      font-size: 10px;
     }
 
-    .amount-words .label { font-size: 8px; color: #888; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 2px; }
+    /* ── Notes ── */
+    .notes-box {
+      margin-bottom: 14px;
+      padding: 8px 12px;
+      background: #fffbf7;
+      border: 1px solid #fde5d0;
+      border-radius: 6px;
+      font-size: 9.5px;
+      color: #555;
+    }
 
-    /* Bank / Signature -->
-    .footer-row {
-      display: flex;
-      gap: 16px;
+    .notes-box .lbl {
+      font-size: 7.5px;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: #999;
+      margin-bottom: 3px;
+    }
+
+    /* ── Footer ── */
+    .inv-footer {
       margin-top: auto;
       padding-top: 12px;
-      border-top: 1px solid #e0e0e0;
+      border-top: 1px solid #e5e7eb;
+      display: flex;
+      gap: 16px;
+      align-items: flex-start;
     }
 
-    .bank-box { flex: 1; font-size: 9.5px; line-height: 1.7; color: #333; }
-    .bank-box .label { font-size: 8px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #888; margin-bottom: 4px; }
+    .bank-block { flex: 1; }
+    .bank-block .lbl {
+      font-size: 7.5px;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: #999;
+      margin-bottom: 5px;
+    }
+    .bank-block .line { font-size: 9.5px; color: #333; line-height: 1.8; }
+    .bank-block .line strong { font-weight: 600; }
 
-    .sig-box { width: 160px; text-align: right; font-size: 9px; color: #555; }
-    .sig-box .sig-line { border-top: 1px solid #aaa; margin-top: 30px; padding-top: 4px; }
-
-    /* Notes */
-    .notes-box { font-size: 9.5px; color: #555; margin-bottom: 12px; }
-    .notes-box .label { font-size: 8px; color: #888; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 2px; }
-
-    /* Print button (hidden when printing) */
-    .print-btn {
-      position: fixed;
-      top: 16px; right: 16px;
-      background: #ff6400;
-      color: #fff;
-      border: none;
-      padding: 10px 20px;
-      border-radius: 6px;
-      font-size: 13px;
-      font-weight: 600;
-      cursor: pointer;
-      font-family: 'Inter', sans-serif;
-      box-shadow: 0 4px 12px rgba(255,100,0,0.3);
+    .sig-block {
+      width: 150px;
+      text-align: right;
+      font-size: 9px;
+      color: #555;
     }
 
-    .back-btn {
-      position: fixed;
-      top: 16px; left: 16px;
-      background: #222;
-      color: #fff;
-      border: none;
-      padding: 10px 20px;
-      border-radius: 6px;
-      font-size: 13px;
-      font-weight: 600;
-      cursor: pointer;
-      font-family: 'Inter', sans-serif;
-      text-decoration: none;
-      display: inline-block;
-    }
+    .sig-block .co { font-weight: 600; font-size: 9.5px; margin-bottom: 28px; }
+    .sig-block .line { border-top: 1px solid #aaa; padding-top: 4px; }
 
+    /* ── Print ── */
     @media print {
-      .print-btn, .back-btn { display: none !important; }
-      body { padding: 0; }
-      .page { width: 100%; min-height: auto; }
+      .print-controls { display: none !important; }
+      body { background: #fff; }
+      .page { width: 100%; min-height: auto; padding: 8mm 10mm; }
     }
   </style>
 </head>
 <body>
 
-<a class="back-btn" href="{% url 'invoice_detail' invoice.pk %}">← Back</a>
-<button class="print-btn" onclick="window.print()">🖨 Print / Save PDF</button>
+<!-- Controls (hidden on print) -->
+<div class="print-controls">
+  <a class="ctrl-btn ctrl-btn-back" href="{% url 'invoice_detail' invoice.pk %}">&#8592; Back</a>
+  <button class="ctrl-btn ctrl-btn-primary" onclick="window.print()">Print / Save PDF</button>
+</div>
 
+{% load static %}
 <div class="page">
-  <!-- Company Header -->
-  <div class="header">
-    <div class="company-block">
-      <div class="co-name">{{ settings.COMPANY_NAME }}</div>
-      <div class="co-tag">{{ settings.COMPANY_TAGLINE }}</div>
-      <div class="co-addr">
-        {{ settings.COMPANY_ADDRESS }}<br>
-        {{ settings.COMPANY_CITY }}<br>
-        📱 {{ settings.COMPANY_MOBILE }}
+
+  <!-- Header -->
+  <div class="inv-header">
+    <div class="co-block">
+      <img src="{% static 'img/logo.png' %}" alt="MaxWheel" class="co-logo">
+      <div class="co-text">
+        <div class="co-name">{{ settings.COMPANY_NAME }}</div>
+        <div class="co-tag">{{ settings.COMPANY_TAGLINE }}</div>
+        <div class="co-addr">
+          {{ settings.COMPANY_ADDRESS }}<br>
+          {{ settings.COMPANY_CITY }}<br>
+          Mob: {{ settings.COMPANY_MOBILE }}
+        </div>
       </div>
     </div>
-    <div class="invoice-meta">
-      <div class="inv-title">Tax Invoice</div>
-      <div class="inv-no">No. {{ invoice.invoice_number }}</div>
+    <div class="inv-title-block">
+      <div class="title-word">Tax Invoice</div>
+      <div class="inv-num">No. {{ invoice.invoice_number }}</div>
       <div class="inv-date">Date: {{ invoice.invoice_date|date:"d M Y" }}</div>
     </div>
   </div>
 
-  <!-- Bill To / Car Info -->
+  <!-- Bill To + Vehicle -->
   <div class="info-row">
     <div class="info-box">
-      <div class="label">Bill To</div>
-      <div class="value">{{ invoice.customer.name }}</div>
-      {% if invoice.customer.address %}<div class="sub">{{ invoice.customer.address }}</div>{% endif %}
-      {% if invoice.customer.mobile %}<div class="sub">📱 {{ invoice.customer.mobile }}</div>{% endif %}
-      {% if invoice.customer.email %}<div class="sub">✉ {{ invoice.customer.email }}</div>{% endif %}
+      <div class="lbl">Bill To</div>
+      <div class="val">{{ invoice.customer.name }}</div>
+      {% if invoice.customer.address %}<div class="val-sub">{{ invoice.customer.address }}</div>{% endif %}
+      {% if invoice.customer.mobile %}<div class="val-sub">Mob: {{ invoice.customer.mobile }}</div>{% endif %}
+      {% if invoice.customer.email %}<div class="val-sub">{{ invoice.customer.email }}</div>{% endif %}
     </div>
+
     {% if invoice.car_number or invoice.car_model %}
-    <div class="info-box">
-      <div class="label">Vehicle Details</div>
-      {% if invoice.car_number %}<div class="value">{{ invoice.car_number }}</div>{% endif %}
-      {% if invoice.car_model %}<div class="sub">{{ invoice.car_model }}</div>{% endif %}
+    <div class="info-box" style="max-width:200px">
+      <div class="lbl">Vehicle Details</div>
+      {% if invoice.car_number %}<div class="val">{{ invoice.car_number }}</div>{% endif %}
+      {% if invoice.car_model %}<div class="val-sub">{{ invoice.car_model }}</div>{% endif %}
     </div>
     {% endif %}
   </div>
 
-  <!-- Line Items Table -->
+  <!-- Line Items -->
   <table>
     <thead>
       <tr>
-        <th style="width:30px">#</th>
+        <th style="width:28px">#</th>
         <th>Description of Goods / Services</th>
-        <th class="right" style="width:55px">Qty</th>
-        <th style="width:45px">Unit</th>
-        <th class="right" style="width:70px">Rate (₹)</th>
-        <th class="right" style="width:80px">Amount (₹)</th>
+        <th class="r" style="width:50px">Qty</th>
+        <th style="width:40px">Unit</th>
+        <th class="r" style="width:70px">Rate (&#8377;)</th>
+        <th class="r" style="width:80px">Amount (&#8377;)</th>
       </tr>
     </thead>
     <tbody>
       {% for item in invoice.line_items.all %}
       <tr>
-        <td>{{ item.sr_no }}</td>
+        <td class="dim">{{ item.sr_no }}</td>
         <td class="bold">{{ item.product_name }}</td>
-        <td class="right">{{ item.quantity }}</td>
-        <td>{{ item.unit }}</td>
-        <td class="right">{{ item.rate|floatformat:2 }}</td>
-        <td class="right bold">{{ item.amount|floatformat:2 }}</td>
+        <td class="r">{{ item.quantity }}</td>
+        <td class="dim">{{ item.unit }}</td>
+        <td class="r">{{ item.rate|floatformat:2 }}</td>
+        <td class="r bold">{{ item.amount|floatformat:2 }}</td>
       </tr>
       {% endfor %}
-      <!-- Padding rows -->
-      {% with pad_count=invoice.line_items.count %}
-      {% if pad_count < 8 %}
-        {% for i in "12345678"|make_list %}
-        {% if forloop.counter > pad_count %}
+      <!-- Padding rows to fill space -->
+      {% for i in "12345" %}
+        {% if forloop.counter > invoice.line_items.count %}
         <tr><td>&nbsp;</td><td></td><td></td><td></td><td></td><td></td></tr>
         {% endif %}
-        {% endfor %}
-      {% endif %}
-      {% endwith %}
+      {% endfor %}
     </tbody>
   </table>
 
   <!-- Totals -->
   <div class="totals-section">
     <div class="totals-box">
-      <div class="t-row"><span>Subtotal</span><span>₹ {{ invoice.subtotal|floatformat:2 }}</span></div>
+      <div class="t-row"><span>Subtotal</span><span>&#8377; {{ invoice.subtotal|floatformat:2 }}</span></div>
       {% if invoice.discount %}
-      <div class="t-row"><span>Discount</span><span>- ₹ {{ invoice.discount|floatformat:2 }}</span></div>
+      <div class="t-row"><span>Discount</span><span>- &#8377; {{ invoice.discount|floatformat:2 }}</span></div>
       {% endif %}
-      <div class="t-row grand"><span>TOTAL</span><span>₹ {{ invoice.total|floatformat:2 }}</span></div>
+      <div class="t-row grand"><span>TOTAL</span><span>&#8377; {{ invoice.total|floatformat:2 }}</span></div>
     </div>
   </div>
 
+  <!-- Notes -->
   {% if invoice.notes %}
   <div class="notes-box">
-    <div class="label">Notes</div>
+    <div class="lbl">Notes</div>
     <div>{{ invoice.notes }}</div>
   </div>
   {% endif %}
 
   <!-- Footer: Bank + Signature -->
-  <div class="footer-row">
-    <div class="bank-box">
-      <div class="label">Bank Details (for NEFT / RTGS)</div>
-      <div><strong>Bank:</strong> {{ settings.BANK_NAME }} — {{ settings.BANK_BRANCH }}</div>
-      <div><strong>Account No.:</strong> {{ settings.BANK_ACCOUNT }}</div>
-      <div><strong>IFSC:</strong> {{ settings.BANK_IFSC }}</div>
+  <div class="inv-footer">
+    <div class="bank-block">
+      <div class="lbl">Bank Details — NEFT / RTGS</div>
+      <div class="line"><strong>Bank:</strong> {{ settings.BANK_NAME }}, {{ settings.BANK_BRANCH }}</div>
+      <div class="line"><strong>Account No.:</strong> {{ settings.BANK_ACCOUNT }}</div>
+      <div class="line"><strong>IFSC:</strong> {{ settings.BANK_IFSC }}</div>
     </div>
-    <div class="sig-box">
-      <div style="font-weight:600; font-size:10px">For {{ settings.COMPANY_NAME }}</div>
-      <div class="sig-line">Authorised Signatory</div>
+    <div class="sig-block">
+      <div class="co">For {{ settings.COMPANY_NAME }}</div>
+      <div class="line">Authorised Signatory</div>
     </div>
   </div>
-</div>
 
+</div>
 </body>
 </html>

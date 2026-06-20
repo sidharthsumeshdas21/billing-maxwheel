@@ -4,17 +4,27 @@
 
 {% block content %}
 <div class="page-header">
-  <h1>Invoices</h1>
-  <a href="{% url 'invoice_create' %}" class="btn btn-primary">➕ New Invoice</a>
+  <div>
+    <h1>Invoices</h1>
+    <div class="sub">{{ invoices|length }} invoice{{ invoices|length|pluralize }}</div>
+  </div>
+  <div class="page-header-actions">
+    <a href="{% url 'invoice_create' %}" class="btn btn-primary">
+      <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      New Invoice
+    </a>
+  </div>
 </div>
 
 <div class="card">
   <div class="card-header">
     <form method="get" class="search-wrap">
-      <span class="search-icon">🔍</span>
-      <input class="form-input" type="search" name="q" value="{{ query }}" placeholder="Search invoice #, customer, car...">
+      <span class="search-ico">
+        <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      </span>
+      <input class="form-input" type="search" name="q" value="{{ query }}"
+             placeholder="Search invoice no., customer, car number...">
     </form>
-    <span class="text-muted" style="font-size:0.8rem">{{ invoices|length }} invoice{{ invoices|length|pluralize }}</span>
   </div>
 
   {% if invoices %}
@@ -22,35 +32,45 @@
     <table class="data-table">
       <thead>
         <tr>
-          <th>Invoice #</th>
+          <th>Invoice No.</th>
           <th>Date</th>
           <th>Customer</th>
-          <th>Car</th>
+          <th>Vehicle</th>
           <th class="text-right">Subtotal</th>
           <th class="text-right">Discount</th>
           <th class="text-right">Total</th>
-          <th>Actions</th>
+          <th style="width:130px"></th>
         </tr>
       </thead>
       <tbody>
         {% for inv in invoices %}
         <tr>
           <td><span class="badge badge-orange">{{ inv.invoice_number }}</span></td>
-          <td class="text-muted">{{ inv.invoice_date|date:"d M Y" }}</td>
-          <td class="fw-700">{{ inv.customer.name }}</td>
-          <td class="text-muted">
-            {% if inv.car_number %}{{ inv.car_number }}{% endif %}
+          <td class="text-dim">{{ inv.invoice_date|date:"d M Y" }}</td>
+          <td class="fw-600">{{ inv.customer.name }}</td>
+          <td class="text-dim">
+            {{ inv.car_number|default:"—" }}
             {% if inv.car_model %}<br><span style="font-size:0.75rem">{{ inv.car_model }}</span>{% endif %}
           </td>
-          <td class="text-right">₹{{ inv.subtotal|floatformat:2 }}</td>
-          <td class="text-right text-muted">{% if inv.discount %}-₹{{ inv.discount|floatformat:2 }}{% else %}—{% endif %}</td>
-          <td class="text-right fw-700 text-orange">₹{{ inv.total|floatformat:2 }}</td>
+          <td class="text-right text-mono">&#8377;{{ inv.subtotal|floatformat:2 }}</td>
+          <td class="text-right text-dim text-mono">
+            {% if inv.discount %}-&#8377;{{ inv.discount|floatformat:2 }}{% else %}—{% endif %}
+          </td>
+          <td class="text-right fw-700 text-orange text-mono">&#8377;{{ inv.total|floatformat:2 }}</td>
           <td>
-            <div class="flex gap-2">
-              <a href="{% url 'invoice_detail' inv.pk %}" class="btn btn-secondary btn-sm" title="View">👁</a>
-              <a href="{% url 'invoice_print' inv.pk %}" class="btn btn-secondary btn-sm" title="Print">🖨</a>
-              <a href="{% url 'invoice_edit' inv.pk %}" class="btn btn-secondary btn-sm" title="Edit">✏️</a>
-              <a href="{% url 'invoice_delete' inv.pk %}" class="btn btn-danger btn-sm" title="Delete">🗑</a>
+            <div class="flex gap-2" style="justify-content:flex-end">
+              <a href="{% url 'invoice_detail' inv.pk %}" class="btn btn-secondary btn-sm btn-icon" title="View">
+                <svg viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+              </a>
+              <a href="{% url 'invoice_print' inv.pk %}" class="btn btn-secondary btn-sm btn-icon" title="Print" target="_blank">
+                <svg viewBox="0 0 24 24"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+              </a>
+              <a href="{% url 'invoice_edit' inv.pk %}" class="btn btn-secondary btn-sm btn-icon" title="Edit">
+                <svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+              </a>
+              <a href="{% url 'invoice_delete' inv.pk %}" class="btn btn-danger btn-sm btn-icon" title="Delete">
+                <svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+              </a>
             </div>
           </td>
         </tr>
@@ -60,10 +80,12 @@
   </div>
   {% else %}
   <div class="empty-state">
-    <div class="empty-icon">🧾</div>
+    <div class="empty-ico">
+      <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+    </div>
     <h3>{% if query %}No invoices match "{{ query }}"{% else %}No invoices yet{% endif %}</h3>
-    <p>{% if query %}Try a different search term.{% else %}Create your first invoice.{% endif %}</p>
-    {% if not query %}<a href="{% url 'invoice_create' %}" class="btn btn-primary mt-4">➕ Create Invoice</a>{% endif %}
+    <p>{% if query %}Try a different search term.{% else %}Create your first invoice to get started.{% endif %}</p>
+    {% if not query %}<a href="{% url 'invoice_create' %}" class="btn btn-primary">Create Invoice</a>{% endif %}
   </div>
   {% endif %}
 </div>

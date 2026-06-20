@@ -4,72 +4,90 @@
 
 {% block content %}
 <div class="page-header">
-  <h1>Invoice <span class="text-orange">{{ invoice.invoice_number }}</span></h1>
-  <div class="flex gap-2">
-    <a href="{% url 'invoice_list' %}" class="btn btn-secondary">← Back</a>
-    <a href="{% url 'invoice_print' invoice.pk %}" class="btn btn-secondary" target="_blank">🖨 Print</a>
-    <a href="{% url 'invoice_edit' invoice.pk %}" class="btn btn-primary">✏️ Edit</a>
-    <a href="{% url 'invoice_delete' invoice.pk %}" class="btn btn-danger">🗑 Delete</a>
+  <div>
+    <h1>Invoice <span class="text-orange">{{ invoice.invoice_number }}</span></h1>
+    <div class="sub">{{ invoice.invoice_date|date:"d F Y" }}</div>
+  </div>
+  <div class="page-header-actions">
+    <a href="{% url 'invoice_list' %}" class="btn btn-secondary">
+      <svg viewBox="0 0 24 24"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+      Back
+    </a>
+    <a href="{% url 'invoice_print' invoice.pk %}" class="btn btn-secondary" target="_blank">
+      <svg viewBox="0 0 24 24"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+      Print / PDF
+    </a>
+    <a href="{% url 'invoice_edit' invoice.pk %}" class="btn btn-primary">
+      <svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+      Edit
+    </a>
+    <a href="{% url 'invoice_delete' invoice.pk %}" class="btn btn-danger">
+      <svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+      Delete
+    </a>
   </div>
 </div>
 
 <div class="card">
   <div class="card-body">
-    <!-- Header info -->
-    <div class="inv-header-grid mb-4">
+
+    <!-- Customer + Invoice Meta -->
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:24px; margin-bottom:22px">
       <div>
-        <div class="inv-label">Customer</div>
-        <div class="inv-value fw-700" style="font-size:1.1rem">{{ invoice.customer.name }}</div>
-        {% if invoice.customer.address %}<div class="text-muted" style="font-size:0.8rem">{{ invoice.customer.address }}</div>{% endif %}
-        {% if invoice.customer.mobile %}<div class="text-muted" style="font-size:0.8rem">📱 {{ invoice.customer.mobile }}</div>{% endif %}
+        <div class="detail-label">Bill To</div>
+        <div style="font-size:1.1rem; font-weight:700; color:var(--t-100); margin-bottom:4px">{{ invoice.customer.name }}</div>
+        {% if invoice.customer.address %}<div class="text-dim" style="font-size:0.83rem">{{ invoice.customer.address }}</div>{% endif %}
+        {% if invoice.customer.mobile %}<div class="text-dim" style="font-size:0.83rem; margin-top:2px">{{ invoice.customer.mobile }}</div>{% endif %}
+        {% if invoice.customer.email %}<div class="text-dim" style="font-size:0.83rem">{{ invoice.customer.email }}</div>{% endif %}
       </div>
       <div style="text-align:right">
-        <div class="inv-label">Invoice #</div>
-        <div class="inv-value fw-700" style="font-size:1.2rem; color:var(--orange)">{{ invoice.invoice_number }}</div>
-        <div class="inv-label mt-4">Date</div>
-        <div class="inv-value">{{ invoice.invoice_date|date:"d M Y" }}</div>
+        <div class="detail-label">Invoice No.</div>
+        <div style="font-size:1.2rem; font-weight:700; color:var(--orange); margin-bottom:10px">{{ invoice.invoice_number }}</div>
+        <div class="detail-label">Date</div>
+        <div style="font-size:0.9rem; font-weight:500; color:var(--t-100)">{{ invoice.invoice_date|date:"d M Y" }}</div>
       </div>
     </div>
 
+    <!-- Vehicle -->
     {% if invoice.car_number or invoice.car_model %}
-    <div class="form-grid mb-4" style="grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap:12px">
+    <div style="display:flex; gap:24px; margin-bottom:20px; padding:12px 16px; background:var(--bg-750); border-radius:var(--r-sm); border:1px solid var(--border)">
       {% if invoice.car_number %}
       <div>
-        <div class="inv-label">Car Number</div>
-        <div class="inv-value">{{ invoice.car_number }}</div>
+        <div class="detail-label">Vehicle Number</div>
+        <div style="font-size:0.9rem; font-weight:600; color:var(--t-100)">{{ invoice.car_number }}</div>
       </div>
       {% endif %}
       {% if invoice.car_model %}
       <div>
-        <div class="inv-label">Car Model</div>
-        <div class="inv-value">{{ invoice.car_model }}</div>
+        <div class="detail-label">Vehicle Model</div>
+        <div style="font-size:0.9rem; font-weight:600; color:var(--t-100)">{{ invoice.car_model }}</div>
       </div>
       {% endif %}
     </div>
     {% endif %}
 
     <!-- Line Items -->
-    <div class="table-wrap mb-4">
+    <div class="table-wrap" style="margin-bottom:20px">
       <table class="data-table">
         <thead>
           <tr>
-            <th style="width:40px">#</th>
-            <th>Product / Service</th>
+            <th style="width:36px">#</th>
+            <th>Description</th>
             <th class="text-right">Qty</th>
             <th>Unit</th>
-            <th class="text-right">Rate (₹)</th>
-            <th class="text-right">Amount (₹)</th>
+            <th class="text-right">Rate (&#8377;)</th>
+            <th class="text-right">Amount (&#8377;)</th>
           </tr>
         </thead>
         <tbody>
           {% for item in invoice.line_items.all %}
           <tr>
-            <td class="text-muted">{{ item.sr_no }}</td>
-            <td class="fw-700">{{ item.product_name }}</td>
-            <td class="text-right">{{ item.quantity }}</td>
-            <td class="text-muted">{{ item.unit }}</td>
-            <td class="text-right">{{ item.rate|floatformat:2 }}</td>
-            <td class="text-right fw-700">{{ item.amount|floatformat:2 }}</td>
+            <td class="text-dim">{{ item.sr_no }}</td>
+            <td class="fw-600">{{ item.product_name }}</td>
+            <td class="text-right text-mono">{{ item.quantity }}</td>
+            <td class="text-dim">{{ item.unit }}</td>
+            <td class="text-right text-mono">{{ item.rate|floatformat:2 }}</td>
+            <td class="text-right fw-600 text-mono">{{ item.amount|floatformat:2 }}</td>
           </tr>
           {% endfor %}
         </tbody>
@@ -78,21 +96,30 @@
 
     <!-- Totals -->
     <div style="display:flex; justify-content:flex-end">
-      <div class="totals-box">
-        <div class="totals-row"><span>Subtotal</span><span>₹{{ invoice.subtotal|floatformat:2 }}</span></div>
+      <div class="totals-panel">
+        <div class="totals-row">
+          <span class="tr-label">Subtotal</span>
+          <span class="tr-val">&#8377;{{ invoice.subtotal|floatformat:2 }}</span>
+        </div>
         {% if invoice.discount %}
-        <div class="totals-row"><span>Discount</span><span>-₹{{ invoice.discount|floatformat:2 }}</span></div>
+        <div class="totals-row">
+          <span class="tr-label">Discount</span>
+          <span class="tr-val">-&#8377;{{ invoice.discount|floatformat:2 }}</span>
+        </div>
         {% endif %}
-        <div class="totals-row grand"><span>Total</span><span class="text-orange">₹{{ invoice.total|floatformat:2 }}</span></div>
+        <div class="totals-row grand">
+          <span class="tr-label">Total</span>
+          <span class="tr-val">&#8377;{{ invoice.total|floatformat:2 }}</span>
+        </div>
       </div>
     </div>
 
     {% if invoice.notes %}
-    <div class="mt-8" style="border-top:1px solid var(--border); padding-top:16px">
-      <div class="inv-label">Notes</div>
-      <div class="inv-value" style="color:var(--text-300)">{{ invoice.notes }}</div>
-    </div>
+    <div class="divider"></div>
+    <div class="detail-label">Notes</div>
+    <div style="font-size:0.875rem; color:var(--t-400)">{{ invoice.notes }}</div>
     {% endif %}
+
   </div>
 </div>
 {% endblock %}

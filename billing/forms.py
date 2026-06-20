@@ -46,9 +46,10 @@ LineItemFormSet = inlineformset_factory(
     Invoice,
     LineItem,
     form=LineItemForm,
-    extra=10,
+    extra=5,
     min_num=1,
     validate_min=True,
     can_delete=True,
+    can_delete_extra=True,
     fields=['product_name', 'quantity', 'unit', 'rate'],
 )

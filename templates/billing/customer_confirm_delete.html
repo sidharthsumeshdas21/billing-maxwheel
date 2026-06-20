@@ -3,24 +3,29 @@
 {% block topbar_title %}Delete Customer{% endblock %}
 
 {% block content %}
-<div class="confirm-card card">
-  <div class="card-header">
-    <span class="card-title" style="color:var(--danger)">⚠️ Delete Customer</span>
-  </div>
-  <div class="card-body">
-    <p style="color:var(--text-300); margin-bottom:16px">
-      Are you sure you want to delete customer <strong class="text-orange">{{ customer.name }}</strong>?
-      <br><br>
-      <span style="color:var(--danger); font-size:0.85rem">
+<div class="confirm-box">
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title" style="color:var(--red)">Delete Customer</span>
+    </div>
+    <div class="card-body">
+      <p style="color:var(--t-200); margin-bottom:8px; font-size:0.9rem">
+        Are you sure you want to delete customer
+        <strong style="color:var(--orange)">{{ customer.name }}</strong>?
+      </p>
+      <p style="color:var(--red); font-size:0.8rem; margin-bottom:22px">
         This will fail if the customer has existing invoices. Delete their invoices first.
-      </span>
-    </p>
-    <div class="flex gap-2">
-      <form method="post">
-        {% csrf_token %}
-        <button type="submit" class="btn btn-danger">🗑 Yes, Delete</button>
-      </form>
-      <a href="{% url 'customer_list' %}" class="btn btn-secondary">Cancel</a>
+      </p>
+      <div class="flex gap-2">
+        <form method="post">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-danger">
+            <svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+            Yes, Delete
+          </button>
+        </form>
+        <a href="{% url 'customer_list' %}" class="btn btn-secondary">Cancel</a>
+      </div>
     </div>
   </div>
 </div>

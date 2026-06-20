@@ -2,32 +2,43 @@
 {% block title %}Login — MaxWheel Billing{% endblock %}
 
 {% block auth_content %}
-<div class="login-wrap">
+{% load static %}
+<div class="login-page">
   <div class="login-card">
-    <div class="login-logo">
-      <div class="brand">⚙ MAXWHEEL</div>
-      <div class="sub">Auto Services · Billing</div>
+
+    <div class="login-brand">
+      <div class="logo-wrap">
+        <img src="{% static 'img/logo.png' %}" alt="MaxWheel">
+      </div>
+      <h1>MAXWHEEL</h1>
+      <p>Billing System</p>
     </div>
 
     {% if form.errors %}
-      <div class="message error mb-4">❌ Invalid username or password. Try again.</div>
+    <div class="message error mb-4" style="margin-bottom:16px">Invalid username or password. Please try again.</div>
     {% endif %}
 
     <form method="post">
       {% csrf_token %}
-      <div class="form-group mb-4">
+      <div class="form-group mb-4" style="margin-bottom:14px">
         <label class="form-label" for="id_username">Username</label>
-        <input class="form-input" type="text" id="id_username" name="username" autofocus autocomplete="username" placeholder="Enter username">
+        <input class="form-input" type="text" id="id_username" name="username"
+               autofocus autocomplete="username" placeholder="Enter your username">
       </div>
-      <div class="form-group mb-4">
+      <div class="form-group" style="margin-bottom:22px">
         <label class="form-label" for="id_password">Password</label>
-        <input class="form-input" type="password" id="id_password" name="password" autocomplete="current-password" placeholder="Enter password">
+        <input class="form-input" type="password" id="id_password" name="password"
+               autocomplete="current-password" placeholder="Enter your password">
       </div>
       <input type="hidden" name="next" value="{{ next }}">
-      <button type="submit" class="btn btn-primary btn-lg" style="width:100%;justify-content:center">
-        🔑 Sign In
+      <button type="submit" class="btn btn-primary btn-lg w-full" style="justify-content:center">
+        Sign In
       </button>
     </form>
+
+    <div style="margin-top:24px; text-align:center; font-size:0.75rem; color:var(--t-600)">
+      MaxWheel Auto Services &mdash; Internal Use Only
+    </div>
   </div>
 </div>
 {% endblock %}

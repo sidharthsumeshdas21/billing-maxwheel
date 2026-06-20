@@ -1,0 +1,45 @@
+{% extends 'billing/base.html' %}
+{% block title %}{{ title }} — MaxWheel Billing{% endblock %}
+{% block topbar_title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>{{ title }}</h1>
+  <a href="{% url 'customer_list' %}" class="btn btn-secondary">← Back</a>
+</div>
+
+<div class="card" style="max-width:540px">
+  <div class="card-header"><span class="card-title">Customer Details</span></div>
+  <div class="card-body">
+    <form method="post">
+      {% csrf_token %}
+      <div class="form-grid" style="grid-template-columns:1fr">
+        <div class="form-group">
+          <label class="form-label">Customer / Company Name *</label>
+          {{ form.name }}
+          {% if form.name.errors %}<div class="form-error">{{ form.name.errors|join:", " }}</div>{% endif %}
+        </div>
+        <div class="form-group">
+          <label class="form-label">Address / City</label>
+          {{ form.address }}
+        </div>
+        <div class="form-group">
+          <label class="form-label">Mobile Number</label>
+          {{ form.mobile }}
+        </div>
+        <div class="form-group">
+          <label class="form-label">Email (optional)</label>
+          {{ form.email }}
+        </div>
+      </div>
+      <div class="flex gap-2 mt-4">
+        <button type="submit" class="btn btn-primary">💾 {{ action }} Customer</button>
+        <a href="{% url 'customer_list' %}" class="btn btn-secondary">Cancel</a>
+        {% if customer %}
+        <a href="{% url 'customer_delete' customer.pk %}" class="btn btn-danger ml-auto">🗑 Delete</a>
+        {% endif %}
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

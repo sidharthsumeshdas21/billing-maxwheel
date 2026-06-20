@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}MaxWheel Billing{% endblock %}</title>
+  <meta name="description" content="MaxWheel Auto Services — Professional Billing System">
+  {% load static %}
+  <link rel="stylesheet" href="{% static 'style.css' %}">
+  {% block extra_css %}{% endblock %}
+</head>
+<body>
+{% if user.is_authenticated %}
+<div class="layout">
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="brand-name">⚙ MAXWHEEL</div>
+      <div class="brand-sub">Auto Services · Billing</div>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-section">Main</div>
+      <a href="{% url 'dashboard' %}" class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
+        <span class="nav-icon">📊</span> Dashboard
+      </a>
+
+      <div class="nav-section">Invoices</div>
+      <a href="{% url 'invoice_list' %}" class="nav-link {% if 'invoice' in request.resolver_match.url_name %}active{% endif %}">
+        <span class="nav-icon">🧾</span> All Invoices
+      </a>
+      <a href="{% url 'invoice_create' %}" class="nav-link">
+        <span class="nav-icon">➕</span> New Invoice
+      </a>
+
+      <div class="nav-section">Customers</div>
+      <a href="{% url 'customer_list' %}" class="nav-link {% if 'customer' in request.resolver_match.url_name %}active{% endif %}">
+        <span class="nav-icon">👥</span> Customers
+      </a>
+      <a href="{% url 'customer_create' %}" class="nav-link">
+        <span class="nav-icon">➕</span> New Customer
+      </a>
+    </nav>
+    <div class="sidebar-footer">
+      <form action="{% url 'logout' %}" method="post" style="margin:0">
+        {% csrf_token %}
+        <button type="submit" class="logout-btn">
+          <span>🚪</span> Logout
+        </button>
+      </form>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <div class="main-content">
+    <header class="topbar">
+      <div class="topbar-title">{% block topbar_title %}MaxWheel{% endblock %}</div>
+      <div class="flex-center gap-2">
+        <span class="text-muted" style="font-size:0.8rem">👤 {{ user.username }}</span>
+      </div>
+    </header>
+    <div class="page-body">
+      {% if messages %}
+        <ul class="messages">
+          {% for msg in messages %}
+            <li class="message {{ msg.tags }}">
+              {% if msg.tags == 'success' %}✅{% elif msg.tags == 'error' %}❌{% else %}ℹ️{% endif %}
+              {{ msg }}
+            </li>
+          {% endfor %}
+        </ul>
+      {% endif %}
+      {% block content %}{% endblock %}
+    </div>
+  </div>
+</div>
+{% else %}
+{% block auth_content %}{% endblock %}
+{% endif %}
+
+{% block extra_js %}{% endblock %}
+</body>
+</html>

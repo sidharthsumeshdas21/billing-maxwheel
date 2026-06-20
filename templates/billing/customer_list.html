@@ -1,0 +1,60 @@
+{% extends 'billing/base.html' %}
+{% block title %}Customers — MaxWheel Billing{% endblock %}
+{% block topbar_title %}Customers{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>Customers</h1>
+  <a href="{% url 'customer_create' %}" class="btn btn-primary">➕ New Customer</a>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <form method="get" class="search-wrap">
+      <span class="search-icon">🔍</span>
+      <input class="form-input" type="search" name="q" value="{{ query }}" placeholder="Search name, mobile...">
+    </form>
+    <span class="text-muted" style="font-size:0.8rem">{{ customers|length }} customer{{ customers|length|pluralize }}</span>
+  </div>
+
+  {% if customers %}
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Mobile</th>
+          <th>Email</th>
+          <th>Address</th>
+          <th>Invoices</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for c in customers %}
+        <tr>
+          <td class="fw-700">{{ c.name }}</td>
+          <td class="text-muted">{{ c.mobile|default:"—" }}</td>
+          <td class="text-muted">{{ c.email|default:"—" }}</td>
+          <td class="text-muted">{{ c.address|default:"—" }}</td>
+          <td><span class="badge badge-orange">{{ c.invoices.count }}</span></td>
+          <td>
+            <div class="flex gap-2">
+              <a href="{% url 'customer_edit' c.pk %}" class="btn btn-secondary btn-sm">✏️ Edit</a>
+              <a href="{% url 'customer_delete' c.pk %}" class="btn btn-danger btn-sm">🗑</a>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty-state">
+    <div class="empty-icon">👥</div>
+    <h3>{% if query %}No match for "{{ query }}"{% else %}No customers yet{% endif %}</h3>
+    {% if not query %}<a href="{% url 'customer_create' %}" class="btn btn-primary mt-4">➕ Add Customer</a>{% endif %}
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

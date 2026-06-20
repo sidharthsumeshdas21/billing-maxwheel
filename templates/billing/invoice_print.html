@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Invoice {{ invoice.invoice_number }} — MaxWheel Auto Services</title>
+  {% load static %}
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Rajdhani:wght@600;700&display=swap');
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      font-size: 12px;
+      color: #1a1a1a;
+      background: #fff;
+      padding: 0;
+    }
+
+    .page {
+      width: 210mm;
+      min-height: 297mm;
+      margin: 0 auto;
+      padding: 12mm 14mm;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Header */
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      padding-bottom: 10px;
+      border-bottom: 3px solid #ff6400;
+      margin-bottom: 12px;
+    }
+
+    .company-block .co-name {
+      font-family: 'Rajdhani', sans-serif;
+      font-size: 22px;
+      font-weight: 700;
+      color: #ff6400;
+      letter-spacing: 1.5px;
+      line-height: 1;
+    }
+
+    .company-block .co-tag {
+      font-size: 8px;
+      letter-spacing: 3px;
+      color: #888;
+      text-transform: uppercase;
+      margin-top: 2px;
+    }
+
+    .company-block .co-addr {
+      font-size: 9px;
+      color: #555;
+      margin-top: 6px;
+      line-height: 1.5;
+    }
+
+    .invoice-meta { text-align: right; }
+    .invoice-meta .inv-title {
+      font-size: 18px;
+      font-weight: 700;
+      color: #1a1a1a;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+    .invoice-meta .inv-no {
+      font-size: 14px;
+      font-weight: 700;
+      color: #ff6400;
+      margin-top: 4px;
+    }
+    .invoice-meta .inv-date {
+      font-size: 10px;
+      color: #555;
+      margin-top: 4px;
+    }
+
+    /* Bill To / Car Info */
+    .info-row {
+      display: flex;
+      gap: 16px;
+      margin-bottom: 12px;
+    }
+
+    .info-box {
+      flex: 1;
+      background: #f8f8f8;
+      border: 1px solid #e0e0e0;
+      border-radius: 6px;
+      padding: 10px 12px;
+    }
+
+    .info-box .label {
+      font-size: 8px;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: #888;
+      margin-bottom: 4px;
+    }
+
+    .info-box .value { font-size: 11px; font-weight: 600; color: #1a1a1a; line-height: 1.5; }
+    .info-box .sub   { font-size: 9px; color: #555; }
+
+    /* Line Items Table */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 12px;
+    }
+
+    thead tr {
+      background: #ff6400;
+      color: #fff;
+    }
+
+    thead th {
+      padding: 7px 10px;
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+      text-align: left;
+    }
+
+    thead th.right { text-align: right; }
+
+    tbody tr:nth-child(even) { background: #fafafa; }
+
+    tbody td {
+      padding: 7px 10px;
+      font-size: 10.5px;
+      border-bottom: 1px solid #f0f0f0;
+      color: #1a1a1a;
+    }
+
+    tbody td.right { text-align: right; }
+    tbody td.bold  { font-weight: 600; }
+
+    /* Totals */
+    .totals-section {
+      display: flex;
+      justify-content: flex-end;
+      margin-bottom: 14px;
+    }
+
+    .totals-box {
+      width: 220px;
+      border: 1px solid #e0e0e0;
+      border-radius: 6px;
+      overflow: hidden;
+    }
+
+    .t-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 6px 12px;
+      font-size: 11px;
+      border-bottom: 1px solid #f0f0f0;
+    }
+
+    .t-row:last-child { border-bottom: none; }
+
+    .t-row.grand {
+      background: #ff6400;
+      color: #fff;
+      font-weight: 700;
+      font-size: 13px;
+    }
+
+    /* Amount in words */
+    .amount-words {
+      background: #fff8f4;
+      border: 1px solid #ffd5b4;
+      border-radius: 6px;
+      padding: 8px 12px;
+      margin-bottom: 14px;
+      font-size: 10px;
+    }
+
+    .amount-words .label { font-size: 8px; color: #888; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 2px; }
+
+    /* Bank / Signature -->
+    .footer-row {
+      display: flex;
+      gap: 16px;
+      margin-top: auto;
+      padding-top: 12px;
+      border-top: 1px solid #e0e0e0;
+    }
+
+    .bank-box { flex: 1; font-size: 9.5px; line-height: 1.7; color: #333; }
+    .bank-box .label { font-size: 8px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #888; margin-bottom: 4px; }
+
+    .sig-box { width: 160px; text-align: right; font-size: 9px; color: #555; }
+    .sig-box .sig-line { border-top: 1px solid #aaa; margin-top: 30px; padding-top: 4px; }
+
+    /* Notes */
+    .notes-box { font-size: 9.5px; color: #555; margin-bottom: 12px; }
+    .notes-box .label { font-size: 8px; color: #888; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 2px; }
+
+    /* Print button (hidden when printing) */
+    .print-btn {
+      position: fixed;
+      top: 16px; right: 16px;
+      background: #ff6400;
+      color: #fff;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: 'Inter', sans-serif;
+      box-shadow: 0 4px 12px rgba(255,100,0,0.3);
+    }
+
+    .back-btn {
+      position: fixed;
+      top: 16px; left: 16px;
+      background: #222;
+      color: #fff;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: 'Inter', sans-serif;
+      text-decoration: none;
+      display: inline-block;
+    }
+
+    @media print {
+      .print-btn, .back-btn { display: none !important; }
+      body { padding: 0; }
+      .page { width: 100%; min-height: auto; }
+    }
+  </style>
+</head>
+<body>
+
+<a class="back-btn" href="{% url 'invoice_detail' invoice.pk %}">← Back</a>
+<button class="print-btn" onclick="window.print()">🖨 Print / Save PDF</button>
+
+<div class="page">
+  <!-- Company Header -->
+  <div class="header">
+    <div class="company-block">
+      <div class="co-name">{{ settings.COMPANY_NAME }}</div>
+      <div class="co-tag">{{ settings.COMPANY_TAGLINE }}</div>
+      <div class="co-addr">
+        {{ settings.COMPANY_ADDRESS }}<br>
+        {{ settings.COMPANY_CITY }}<br>
+        📱 {{ settings.COMPANY_MOBILE }}
+      </div>
+    </div>
+    <div class="invoice-meta">
+      <div class="inv-title">Tax Invoice</div>
+      <div class="inv-no">No. {{ invoice.invoice_number }}</div>
+      <div class="inv-date">Date: {{ invoice.invoice_date|date:"d M Y" }}</div>
+    </div>
+  </div>
+
+  <!-- Bill To / Car Info -->
+  <div class="info-row">
+    <div class="info-box">
+      <div class="label">Bill To</div>
+      <div class="value">{{ invoice.customer.name }}</div>
+      {% if invoice.customer.address %}<div class="sub">{{ invoice.customer.address }}</div>{% endif %}
+      {% if invoice.customer.mobile %}<div class="sub">📱 {{ invoice.customer.mobile }}</div>{% endif %}
+      {% if invoice.customer.email %}<div class="sub">✉ {{ invoice.customer.email }}</div>{% endif %}
+    </div>
+    {% if invoice.car_number or invoice.car_model %}
+    <div class="info-box">
+      <div class="label">Vehicle Details</div>
+      {% if invoice.car_number %}<div class="value">{{ invoice.car_number }}</div>{% endif %}
+      {% if invoice.car_model %}<div class="sub">{{ invoice.car_model }}</div>{% endif %}
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Line Items Table -->
+  <table>
+    <thead>
+      <tr>
+        <th style="width:30px">#</th>
+        <th>Description of Goods / Services</th>
+        <th class="right" style="width:55px">Qty</th>
+        <th style="width:45px">Unit</th>
+        <th class="right" style="width:70px">Rate (₹)</th>
+        <th class="right" style="width:80px">Amount (₹)</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for item in invoice.line_items.all %}
+      <tr>
+        <td>{{ item.sr_no }}</td>
+        <td class="bold">{{ item.product_name }}</td>
+        <td class="right">{{ item.quantity }}</td>
+        <td>{{ item.unit }}</td>
+        <td class="right">{{ item.rate|floatformat:2 }}</td>
+        <td class="right bold">{{ item.amount|floatformat:2 }}</td>
+      </tr>
+      {% endfor %}
+      <!-- Padding rows -->
+      {% with pad_count=invoice.line_items.count %}
+      {% if pad_count < 8 %}
+        {% for i in "12345678"|make_list %}
+        {% if forloop.counter > pad_count %}
+        <tr><td>&nbsp;</td><td></td><td></td><td></td><td></td><td></td></tr>
+        {% endif %}
+        {% endfor %}
+      {% endif %}
+      {% endwith %}
+    </tbody>
+  </table>
+
+  <!-- Totals -->
+  <div class="totals-section">
+    <div class="totals-box">
+      <div class="t-row"><span>Subtotal</span><span>₹ {{ invoice.subtotal|floatformat:2 }}</span></div>
+      {% if invoice.discount %}
+      <div class="t-row"><span>Discount</span><span>- ₹ {{ invoice.discount|floatformat:2 }}</span></div>
+      {% endif %}
+      <div class="t-row grand"><span>TOTAL</span><span>₹ {{ invoice.total|floatformat:2 }}</span></div>
+    </div>
+  </div>
+
+  {% if invoice.notes %}
+  <div class="notes-box">
+    <div class="label">Notes</div>
+    <div>{{ invoice.notes }}</div>
+  </div>
+  {% endif %}
+
+  <!-- Footer: Bank + Signature -->
+  <div class="footer-row">
+    <div class="bank-box">
+      <div class="label">Bank Details (for NEFT / RTGS)</div>
+      <div><strong>Bank:</strong> {{ settings.BANK_NAME }} — {{ settings.BANK_BRANCH }}</div>
+      <div><strong>Account No.:</strong> {{ settings.BANK_ACCOUNT }}</div>
+      <div><strong>IFSC:</strong> {{ settings.BANK_IFSC }}</div>
+    </div>
+    <div class="sig-box">
+      <div style="font-weight:600; font-size:10px">For {{ settings.COMPANY_NAME }}</div>
+      <div class="sig-line">Authorised Signatory</div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

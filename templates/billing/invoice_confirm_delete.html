@@ -1,0 +1,26 @@
+{% extends 'billing/base.html' %}
+{% block title %}Delete Invoice — MaxWheel{% endblock %}
+{% block topbar_title %}Delete Invoice{% endblock %}
+
+{% block content %}
+<div class="confirm-card card">
+  <div class="card-header">
+    <span class="card-title" style="color:var(--danger)">⚠️ Delete Invoice</span>
+  </div>
+  <div class="card-body">
+    <p style="color:var(--text-300); margin-bottom:16px">
+      Are you sure you want to delete invoice <strong class="text-orange">{{ invoice.invoice_number }}</strong>
+      for <strong>{{ invoice.customer.name }}</strong>?
+      <br><br>
+      <span style="color:var(--danger); font-size:0.85rem">This action cannot be undone. All line items will also be deleted.</span>
+    </p>
+    <div class="flex gap-2">
+      <form method="post">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-danger">🗑 Yes, Delete</button>
+      </form>
+      <a href="{% url 'invoice_detail' invoice.pk %}" class="btn btn-secondary">Cancel</a>
+    </div>
+  </div>
+</div>
+{% endblock %}

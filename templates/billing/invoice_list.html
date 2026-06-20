@@ -1,0 +1,70 @@
+{% extends 'billing/base.html' %}
+{% block title %}Invoices — MaxWheel Billing{% endblock %}
+{% block topbar_title %}Invoices{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>Invoices</h1>
+  <a href="{% url 'invoice_create' %}" class="btn btn-primary">➕ New Invoice</a>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <form method="get" class="search-wrap">
+      <span class="search-icon">🔍</span>
+      <input class="form-input" type="search" name="q" value="{{ query }}" placeholder="Search invoice #, customer, car...">
+    </form>
+    <span class="text-muted" style="font-size:0.8rem">{{ invoices|length }} invoice{{ invoices|length|pluralize }}</span>
+  </div>
+
+  {% if invoices %}
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Invoice #</th>
+          <th>Date</th>
+          <th>Customer</th>
+          <th>Car</th>
+          <th class="text-right">Subtotal</th>
+          <th class="text-right">Discount</th>
+          <th class="text-right">Total</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for inv in invoices %}
+        <tr>
+          <td><span class="badge badge-orange">{{ inv.invoice_number }}</span></td>
+          <td class="text-muted">{{ inv.invoice_date|date:"d M Y" }}</td>
+          <td class="fw-700">{{ inv.customer.name }}</td>
+          <td class="text-muted">
+            {% if inv.car_number %}{{ inv.car_number }}{% endif %}
+            {% if inv.car_model %}<br><span style="font-size:0.75rem">{{ inv.car_model }}</span>{% endif %}
+          </td>
+          <td class="text-right">₹{{ inv.subtotal|floatformat:2 }}</td>
+          <td class="text-right text-muted">{% if inv.discount %}-₹{{ inv.discount|floatformat:2 }}{% else %}—{% endif %}</td>
+          <td class="text-right fw-700 text-orange">₹{{ inv.total|floatformat:2 }}</td>
+          <td>
+            <div class="flex gap-2">
+              <a href="{% url 'invoice_detail' inv.pk %}" class="btn btn-secondary btn-sm" title="View">👁</a>
+              <a href="{% url 'invoice_print' inv.pk %}" class="btn btn-secondary btn-sm" title="Print">🖨</a>
+              <a href="{% url 'invoice_edit' inv.pk %}" class="btn btn-secondary btn-sm" title="Edit">✏️</a>
+              <a href="{% url 'invoice_delete' inv.pk %}" class="btn btn-danger btn-sm" title="Delete">🗑</a>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty-state">
+    <div class="empty-icon">🧾</div>
+    <h3>{% if query %}No invoices match "{{ query }}"{% else %}No invoices yet{% endif %}</h3>
+    <p>{% if query %}Try a different search term.{% else %}Create your first invoice.{% endif %}</p>
+    {% if not query %}<a href="{% url 'invoice_create' %}" class="btn btn-primary mt-4">➕ Create Invoice</a>{% endif %}
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

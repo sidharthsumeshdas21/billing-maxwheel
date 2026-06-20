@@ -1,0 +1,33 @@
+{% extends 'billing/base.html' %}
+{% block title %}Login — MaxWheel Billing{% endblock %}
+
+{% block auth_content %}
+<div class="login-wrap">
+  <div class="login-card">
+    <div class="login-logo">
+      <div class="brand">⚙ MAXWHEEL</div>
+      <div class="sub">Auto Services · Billing</div>
+    </div>
+
+    {% if form.errors %}
+      <div class="message error mb-4">❌ Invalid username or password. Try again.</div>
+    {% endif %}
+
+    <form method="post">
+      {% csrf_token %}
+      <div class="form-group mb-4">
+        <label class="form-label" for="id_username">Username</label>
+        <input class="form-input" type="text" id="id_username" name="username" autofocus autocomplete="username" placeholder="Enter username">
+      </div>
+      <div class="form-group mb-4">
+        <label class="form-label" for="id_password">Password</label>
+        <input class="form-input" type="password" id="id_password" name="password" autocomplete="current-password" placeholder="Enter password">
+      </div>
+      <input type="hidden" name="next" value="{{ next }}">
+      <button type="submit" class="btn btn-primary btn-lg" style="width:100%;justify-content:center">
+        🔑 Sign In
+      </button>
+    </form>
+  </div>
+</div>
+{% endblock %}

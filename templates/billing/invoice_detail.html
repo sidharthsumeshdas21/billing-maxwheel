@@ -1,0 +1,98 @@
+{% extends 'billing/base.html' %}
+{% block title %}Invoice {{ invoice.invoice_number }} — MaxWheel{% endblock %}
+{% block topbar_title %}Invoice {{ invoice.invoice_number }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>Invoice <span class="text-orange">{{ invoice.invoice_number }}</span></h1>
+  <div class="flex gap-2">
+    <a href="{% url 'invoice_list' %}" class="btn btn-secondary">← Back</a>
+    <a href="{% url 'invoice_print' invoice.pk %}" class="btn btn-secondary" target="_blank">🖨 Print</a>
+    <a href="{% url 'invoice_edit' invoice.pk %}" class="btn btn-primary">✏️ Edit</a>
+    <a href="{% url 'invoice_delete' invoice.pk %}" class="btn btn-danger">🗑 Delete</a>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-body">
+    <!-- Header info -->
+    <div class="inv-header-grid mb-4">
+      <div>
+        <div class="inv-label">Customer</div>
+        <div class="inv-value fw-700" style="font-size:1.1rem">{{ invoice.customer.name }}</div>
+        {% if invoice.customer.address %}<div class="text-muted" style="font-size:0.8rem">{{ invoice.customer.address }}</div>{% endif %}
+        {% if invoice.customer.mobile %}<div class="text-muted" style="font-size:0.8rem">📱 {{ invoice.customer.mobile }}</div>{% endif %}
+      </div>
+      <div style="text-align:right">
+        <div class="inv-label">Invoice #</div>
+        <div class="inv-value fw-700" style="font-size:1.2rem; color:var(--orange)">{{ invoice.invoice_number }}</div>
+        <div class="inv-label mt-4">Date</div>
+        <div class="inv-value">{{ invoice.invoice_date|date:"d M Y" }}</div>
+      </div>
+    </div>
+
+    {% if invoice.car_number or invoice.car_model %}
+    <div class="form-grid mb-4" style="grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap:12px">
+      {% if invoice.car_number %}
+      <div>
+        <div class="inv-label">Car Number</div>
+        <div class="inv-value">{{ invoice.car_number }}</div>
+      </div>
+      {% endif %}
+      {% if invoice.car_model %}
+      <div>
+        <div class="inv-label">Car Model</div>
+        <div class="inv-value">{{ invoice.car_model }}</div>
+      </div>
+      {% endif %}
+    </div>
+    {% endif %}
+
+    <!-- Line Items -->
+    <div class="table-wrap mb-4">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th style="width:40px">#</th>
+            <th>Product / Service</th>
+            <th class="text-right">Qty</th>
+            <th>Unit</th>
+            <th class="text-right">Rate (₹)</th>
+            <th class="text-right">Amount (₹)</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in invoice.line_items.all %}
+          <tr>
+            <td class="text-muted">{{ item.sr_no }}</td>
+            <td class="fw-700">{{ item.product_name }}</td>
+            <td class="text-right">{{ item.quantity }}</td>
+            <td class="text-muted">{{ item.unit }}</td>
+            <td class="text-right">{{ item.rate|floatformat:2 }}</td>
+            <td class="text-right fw-700">{{ item.amount|floatformat:2 }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Totals -->
+    <div style="display:flex; justify-content:flex-end">
+      <div class="totals-box">
+        <div class="totals-row"><span>Subtotal</span><span>₹{{ invoice.subtotal|floatformat:2 }}</span></div>
+        {% if invoice.discount %}
+        <div class="totals-row"><span>Discount</span><span>-₹{{ invoice.discount|floatformat:2 }}</span></div>
+        {% endif %}
+        <div class="totals-row grand"><span>Total</span><span class="text-orange">₹{{ invoice.total|floatformat:2 }}</span></div>
+      </div>
+    </div>
+
+    {% if invoice.notes %}
+    <div class="mt-8" style="border-top:1px solid var(--border); padding-top:16px">
+      <div class="inv-label">Notes</div>
+      <div class="inv-value" style="color:var(--text-300)">{{ invoice.notes }}</div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: billing-maxwheel
+    runtime: python
+    buildCommand: "./build.sh"
+    startCommand: "gunicorn maxwheel.wsgi:application"
+    envVars:
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DEBUG
+        value: "False"
+      - key: DATABASE_URL
+        sync: false          # you'll paste this in Render dashboard
+      - key: ALLOWED_HOSTS
+        sync: false          # Render will give you the domain
+      - key: PYTHON_VERSION
+        value: "3.12.0"

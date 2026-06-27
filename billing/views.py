@@ -122,11 +122,12 @@ def invoice_edit(request, pk):
         formset = LineItemFormSet(request.POST, instance=invoice)
         if form.is_valid() and formset.is_valid():
             invoice = form.save()
-            # Delete removed items first
+            # Save new/changed items first (this also populates deleted_objects)
+            items = formset.save(commit=False)
+            # Delete removed items
             for obj in formset.deleted_objects:
                 obj.delete()
             # Save new/changed items
-            items = formset.save(commit=False)
             for item in items:
                 item.invoice = invoice
                 item.save()

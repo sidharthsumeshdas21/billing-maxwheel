@@ -123,27 +123,24 @@ def invoice_edit(request, pk):
         if form.is_valid() and formset.is_valid():
             invoice = form.save()
             # Save new/changed items first (this also populates deleted_objects)
-            items = formset.save(commit=False)
+            formset.save(commit=False)
             # Delete removed items
             for obj in formset.deleted_objects:
-                obj.delete()
-            # Save new/changed items
-            for item in items:
-                item.invoice = invoice
-                item.save()
-            # Re-number ALL remaining items based on formset order
-            # formset.forms preserves the user's input order
+                if obj.pk:
+                    obj.delete()
+            # Save and re-number ALL remaining items based on formset order
+            # formset.forms preserves the user's input/visual order
             sr = 1
             for f in formset.forms:
                 if f in formset.deleted_forms:
                     continue
                 if not f.cleaned_data or not f.cleaned_data.get('product_name'):
                     continue
-                if f.instance and f.instance.pk:
-                    if f.instance.sr_no != sr:
-                        f.instance.sr_no = sr
-                        f.instance.save(update_fields=['sr_no'])
-                    sr += 1
+                item = f.instance
+                item.invoice = invoice
+                item.sr_no = sr
+                item.save()
+                sr += 1
             messages.success(request, f'Invoice {invoice.invoice_number} updated!')
             return redirect('invoice_detail', pk=invoice.pk)
     else:

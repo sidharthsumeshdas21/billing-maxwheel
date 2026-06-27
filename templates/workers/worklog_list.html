@@ -1,0 +1,120 @@
+{% extends 'billing/base.html' %}
+{% block title %}Work Logs — MaxWheel Billing{% endblock %}
+{% block topbar_title %}Work Logs{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1>Work Logs</h1>
+    <div class="sub">{{ logs|length }} log{{ logs|length|pluralize }}{% if total_wages %} · Total: &#8377;{{ total_wages|floatformat:2 }}{% endif %}</div>
+  </div>
+  <div class="page-header-actions">
+    <a href="{% url 'worker_list' %}" class="btn btn-secondary">
+      <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+      Workers
+    </a>
+    <a href="{% url 'worklog_create' %}" class="btn btn-primary">
+      <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      Add Work Log
+    </a>
+  </div>
+</div>
+
+<div class="card">
+  <!-- Filter Bar -->
+  <div class="card-header">
+    <form method="get" style="display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end; width:100%">
+      <div class="form-group" style="min-width:140px; flex:1">
+        <label class="form-label" style="font-size:0.72rem; margin-bottom:4px">Worker</label>
+        <select name="worker" class="form-input" style="font-size:0.82rem">
+          <option value="">All Workers</option>
+          {% for w in workers %}
+          <option value="{{ w.pk }}" {% if filter_worker == w.pk|stringformat:"d" %}selected{% endif %}>{{ w.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group" style="min-width:130px">
+        <label class="form-label" style="font-size:0.72rem; margin-bottom:4px">From</label>
+        <input type="date" name="date_from" value="{{ filter_date_from }}" class="form-input" style="font-size:0.82rem">
+      </div>
+      <div class="form-group" style="min-width:130px">
+        <label class="form-label" style="font-size:0.72rem; margin-bottom:4px">To</label>
+        <input type="date" name="date_to" value="{{ filter_date_to }}" class="form-input" style="font-size:0.82rem">
+      </div>
+      <div class="form-group" style="min-width:130px">
+        <label class="form-label" style="font-size:0.72rem; margin-bottom:4px">Vehicle No.</label>
+        <input type="text" name="car_number" value="{{ filter_car_number }}" class="form-input" placeholder="e.g. GJ01" style="font-size:0.82rem">
+      </div>
+      <div style="display:flex; gap:6px">
+        <button type="submit" class="btn btn-primary btn-sm">
+          <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          Filter
+        </button>
+        <a href="{% url 'worklog_list' %}" class="btn btn-secondary btn-sm">Clear</a>
+      </div>
+    </form>
+  </div>
+
+  {% if logs %}
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Worker</th>
+          <th>Vehicle</th>
+          <th>Description</th>
+          <th class="text-right">Wages (&#8377;)</th>
+          <th>Invoice</th>
+          <th style="width:100px"></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for log in logs %}
+        <tr>
+          <td class="text-dim">{{ log.date|date:"d M Y" }}</td>
+          <td class="fw-600">
+            <a href="{% url 'worker_detail' log.worker.pk %}" style="color:var(--t-100); text-decoration:none">{{ log.worker.name }}</a>
+          </td>
+          <td class="text-dim">
+            {{ log.car_number|default:"—" }}
+            {% if log.car_model %}<br><span style="font-size:0.75rem">{{ log.car_model }}</span>{% endif %}
+          </td>
+          <td class="fw-600">{{ log.work_description|truncatewords:10 }}</td>
+          <td class="text-right text-mono fw-600">
+            {% if log.wages %}&#8377;{{ log.wages|floatformat:2 }}{% else %}—{% endif %}
+          </td>
+          <td>
+            {% if log.invoice %}
+              <a href="{% url 'invoice_detail' log.invoice.pk %}" class="badge badge-orange" style="text-decoration:none">{{ log.invoice.invoice_number }}</a>
+            {% else %}
+              <span class="text-dim">—</span>
+            {% endif %}
+          </td>
+          <td>
+            <div class="flex gap-2" style="justify-content:flex-end">
+              <a href="{% url 'worklog_edit' log.pk %}" class="btn btn-secondary btn-sm btn-icon" title="Edit">
+                <svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+              </a>
+              <a href="{% url 'worklog_delete' log.pk %}" class="btn btn-danger btn-sm btn-icon" title="Delete">
+                <svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+              </a>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty-state">
+    <div class="empty-ico">
+      <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+    </div>
+    <h3>No work logs found</h3>
+    <p>{% if filter_worker or filter_date_from or filter_date_to or filter_car_number %}Try adjusting your filters.{% else %}Add the first work log to get started.{% endif %}</p>
+    <a href="{% url 'worklog_create' %}" class="btn btn-primary">Add Work Log</a>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

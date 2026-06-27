@@ -1,0 +1,58 @@
+{% extends 'billing/base.html' %}
+{% block title %}{{ title }} — MaxWheel Billing{% endblock %}
+{% block topbar_title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1>{{ title }}</h1>
+  </div>
+  <a href="{% url 'worker_list' %}" class="btn btn-secondary">
+    <svg viewBox="0 0 24 24"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+    Back to Workers
+  </a>
+</div>
+
+<div class="card" style="max-width:520px">
+  <div class="card-header">
+    <span class="card-title">Worker Details</span>
+  </div>
+  <div class="card-body">
+    <form method="post">
+      {% csrf_token %}
+      <div class="form-group mb-4" style="margin-bottom:14px">
+        <label class="form-label">Name <span class="req">*</span></label>
+        {{ form.name }}
+        {% if form.name.errors %}<div class="form-error">{{ form.name.errors|join:", " }}</div>{% endif %}
+      </div>
+      <div class="form-group mb-4" style="margin-bottom:14px">
+        <label class="form-label">Role <span class="req">*</span></label>
+        {{ form.role }}
+        {% if form.role.errors %}<div class="form-error">{{ form.role.errors|join:", " }}</div>{% endif %}
+      </div>
+      <div class="form-group mb-4" style="margin-bottom:14px">
+        <label class="form-label">Mobile Number</label>
+        {{ form.mobile }}
+      </div>
+      <div class="form-group mb-4" style="margin-bottom:22px">
+        <label class="form-label" style="display:flex;align-items:center;gap:8px">
+          {{ form.is_active }} Active
+        </label>
+      </div>
+      <div class="flex gap-2 flex-center">
+        <button type="submit" class="btn btn-primary">
+          <svg viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+          {{ action }} Worker
+        </button>
+        <a href="{% url 'worker_list' %}" class="btn btn-secondary">Cancel</a>
+        {% if worker %}
+        <a href="{% url 'worker_delete' worker.pk %}" class="btn btn-danger ml-auto">
+          <svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+          Delete
+        </a>
+        {% endif %}
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

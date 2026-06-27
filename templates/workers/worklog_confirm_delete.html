@@ -1,0 +1,33 @@
+{% extends 'billing/base.html' %}
+{% block title %}Delete Work Log — MaxWheel{% endblock %}
+{% block topbar_title %}Delete Work Log{% endblock %}
+
+{% block content %}
+<div class="confirm-box">
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title" style="color:var(--red)">Delete Work Log</span>
+    </div>
+    <div class="card-body">
+      <p style="color:var(--t-200); margin-bottom:8px; font-size:0.9rem">
+        Are you sure you want to delete the work log for
+        <strong style="color:var(--orange)">{{ log.worker.name }}</strong>
+        on <strong>{{ log.date|date:"d M Y" }}</strong>?
+      </p>
+      <p style="color:var(--red); font-size:0.8rem; margin-bottom:22px">
+        This action is permanent and cannot be undone.
+      </p>
+      <div class="flex gap-2">
+        <form method="post">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-danger">
+            <svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+            Yes, Delete
+          </button>
+        </form>
+        <a href="{% url 'worklog_list' %}" class="btn btn-secondary">Cancel</a>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

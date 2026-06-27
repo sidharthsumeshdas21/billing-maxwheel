@@ -1,0 +1,79 @@
+{% extends 'billing/base.html' %}
+{% block title %}{{ title }} — MaxWheel Billing{% endblock %}
+{% block topbar_title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1>{{ title }}</h1>
+    <div class="sub">Fill in the work details below</div>
+  </div>
+  <div class="page-header-actions">
+    <a href="{% url 'worklog_list' %}" class="btn btn-secondary">
+      <svg viewBox="0 0 24 24"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+      Back to Logs
+    </a>
+  </div>
+</div>
+
+<div class="card" style="max-width:640px">
+  <div class="card-header">
+    <span class="card-title">Work Log Details</span>
+  </div>
+  <div class="card-body">
+    <form method="post">
+      {% csrf_token %}
+      <div class="form-grid">
+        <div class="form-group">
+          <label class="form-label" for="{{ form.worker.id_for_label }}">Worker <span class="req">*</span></label>
+          {{ form.worker }}
+          {% if form.worker.errors %}<div class="form-error">{{ form.worker.errors|join:", " }}</div>{% endif %}
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="{{ form.date.id_for_label }}">Date <span class="req">*</span></label>
+          {{ form.date }}
+          {% if form.date.errors %}<div class="form-error">{{ form.date.errors|join:", " }}</div>{% endif %}
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="{{ form.car_number.id_for_label }}">Vehicle Number</label>
+          {{ form.car_number }}
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="{{ form.car_model.id_for_label }}">Vehicle Model</label>
+          {{ form.car_model }}
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="{{ form.invoice.id_for_label }}">Invoice</label>
+          {{ form.invoice }}
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="{{ form.wages.id_for_label }}">Wages (&#8377;)</label>
+          {{ form.wages }}
+        </div>
+      </div>
+      <div class="form-group mt-4" style="margin-top:14px">
+        <label class="form-label" for="{{ form.work_description.id_for_label }}">Work Description <span class="req">*</span></label>
+        {{ form.work_description }}
+        {% if form.work_description.errors %}<div class="form-error">{{ form.work_description.errors|join:", " }}</div>{% endif %}
+      </div>
+      <div class="form-group mt-4" style="margin-top:14px; margin-bottom:22px">
+        <label class="form-label" for="{{ form.remarks.id_for_label }}">Remarks</label>
+        {{ form.remarks }}
+      </div>
+      <div class="flex gap-2 flex-center">
+        <button type="submit" class="btn btn-primary">
+          <svg viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+          {{ action }} Work Log
+        </button>
+        <a href="{% url 'worklog_list' %}" class="btn btn-secondary">Cancel</a>
+        {% if log %}
+        <a href="{% url 'worklog_delete' log.pk %}" class="btn btn-danger ml-auto">
+          <svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+          Delete
+        </a>
+        {% endif %}
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

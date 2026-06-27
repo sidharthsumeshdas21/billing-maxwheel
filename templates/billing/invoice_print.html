@@ -77,19 +77,21 @@
 
     .co-text .co-name {
       font-family: 'Rajdhani', sans-serif;
-      font-size: 20px;
+      font-size: 22px;
       font-weight: 700;
       color: #e8610a;
-      letter-spacing: 1.5px;
+      letter-spacing: 2px;
       line-height: 1;
+      text-transform: uppercase;
     }
 
     .co-text .co-tag {
-      font-size: 7.5px;
+      font-size: 8px;
       letter-spacing: 2.5px;
       color: #888;
       text-transform: uppercase;
-      margin-top: 2px;
+      margin-top: 3px;
+      font-weight: 600;
     }
 
     .co-text .co-addr {
@@ -292,8 +294,8 @@
     <div class="co-block">
       <img src="{% static 'img/logo.png' %}" alt="MaxWheel" class="co-logo">
       <div class="co-text">
-        <div class="co-name">{{ settings.COMPANY_NAME }}</div>
-        <div class="co-tag">{{ settings.COMPANY_TAGLINE }}</div>
+        <div class="co-name">THE UNDERGROUND GARAGE</div>
+        <div class="co-tag">MAXWHEEL AUTO SERVICES</div>
         <div class="co-addr">
           {{ settings.COMPANY_ADDRESS }}<br>
           {{ settings.COMPANY_CITY }}<br>
@@ -302,7 +304,7 @@
       </div>
     </div>
     <div class="inv-title-block">
-      <div class="title-word">Tax Invoice</div>
+      <div class="title-word">Invoice</div>
       <div class="inv-num">No. {{ invoice.invoice_number }}</div>
       <div class="inv-date">Date: {{ invoice.invoice_date|date:"d M Y" }}</div>
     </div>

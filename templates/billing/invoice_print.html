@@ -54,7 +54,24 @@
       display: flex;
       flex-direction: column;
       background: #fff;
+      position: relative;
     }
+
+    /* ── Watermark ── */
+    .page-watermark {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 180mm;
+      height: 180mm;
+      object-fit: contain;
+      opacity: 0.05;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .page > *:not(.page-watermark) { position: relative; z-index: 1; }
 
     /* ── Header ── */
     .inv-header {
@@ -289,10 +306,12 @@
 {% load static %}
 <div class="page">
 
+  <!-- Watermark -->
+  <img src="{% static 'img/logo.png' %}" alt="" class="page-watermark" aria-hidden="true">
+
   <!-- Header -->
   <div class="inv-header">
     <div class="co-block">
-      <img src="{% static 'img/logo.png' %}" alt="MaxWheel" class="co-logo">
       <div class="co-text">
         <div class="co-name">THE UNDERGROUND GARAGE</div>
         <div class="co-tag">MAXWHEEL AUTO SERVICES</div>

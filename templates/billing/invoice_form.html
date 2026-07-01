@@ -221,7 +221,8 @@
     newRow.querySelectorAll('input, select, textarea').forEach(function(el) {
       el.name = el.name.replace(/-\d+-/, '-' + total + '-');
       el.id   = (el.id || '').replace(/-\d+-/, '-' + total + '-');
-      if (el.type !== 'hidden' && el.type !== 'checkbox') el.value = '';
+      if (el.type === 'hidden') { el.value = ''; }  // clear id and other hidden fields
+      else if (el.type !== 'checkbox') el.value = '';
       if (el.type === 'checkbox') el.checked = false;
     });
 

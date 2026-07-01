@@ -77,18 +77,30 @@ def invoice_list(request):
 def invoice_create(request):
     if request.method == 'POST':
         form = InvoiceForm(request.POST)
-        formset = LineItemFormSet(request.POST)
-        if form.is_valid() and formset.is_valid():
+        if form.is_valid():
+            # Save invoice first so we have a pk to bind the inline formset
             invoice = form.save()
-            items = formset.save(commit=False)
-            for i, item in enumerate(items, start=1):
-                item.invoice = invoice
-                item.sr_no = i
-                item.save()
-            for obj in formset.deleted_objects:
-                obj.delete()
-            messages.success(request, f'Invoice {invoice.invoice_number} created successfully!')
-            return redirect('invoice_detail', pk=invoice.pk)
+            formset = LineItemFormSet(request.POST, instance=invoice)
+            if formset.is_valid():
+                sr = 1
+                for f in formset.forms:
+                    if f.cleaned_data.get('DELETE'):
+                        continue
+                    if not f.cleaned_data.get('product_name', '').strip():
+                        continue
+                    item = f.instance
+                    item.invoice = invoice
+                    item.sr_no = sr
+                    item.save()
+                    sr += 1
+                messages.success(request, f'Invoice {invoice.invoice_number} created successfully!')
+                return redirect('invoice_detail', pk=invoice.pk)
+            else:
+                # Formset invalid — delete the invoice we just saved and re-render
+                invoice.delete()
+                form = InvoiceForm(request.POST)  # re-bind for display
+        else:
+            formset = LineItemFormSet(request.POST)
     else:
         initial_number = Invoice.get_next_invoice_number()
         form = InvoiceForm(initial={'invoice_number': initial_number, 'invoice_date': timezone.now().date()})
@@ -99,6 +111,7 @@ def invoice_create(request):
         'title': 'New Invoice',
         'action': 'Create',
     })
+
 
 
 # ─── Invoice Detail ──────────────────────────────────────────────────────────

@@ -123,21 +123,17 @@ def invoice_edit(request, pk):
         if form.is_valid() and formset.is_valid():
             invoice = form.save()
 
-            # save(commit=False) populates deleted_objects, changed_objects, new_objects
-            # but does NOT write to DB yet. Returns list of new + changed instances.
-            items_to_save = formset.save(commit=False)
+            # save(commit=False) populates deleted_objects without hitting the DB.
+            # We must NOT call item.save() here — sr_no would be null for new items.
+            formset.save(commit=False)
 
             # 1. Delete removed items
             for obj in formset.deleted_objects:
                 if obj.pk:
                     obj.delete()
 
-            # 2. Save new/changed items (set invoice FK for new items)
-            for item in items_to_save:
-                item.invoice = invoice
-                item.save()
-
-            # 3. Re-number ALL surviving items in the order they appeared in the form
+            # 2. Save every surviving item in one pass, assigning sr_no before save
+            #    so we never hit the NOT NULL constraint on sr_no.
             sr = 1
             for f in formset.forms:
                 if f in formset.deleted_forms:
@@ -145,9 +141,9 @@ def invoice_edit(request, pk):
                 if not f.cleaned_data or not f.cleaned_data.get('product_name'):
                     continue
                 item = f.instance
-                if item.pk and item.sr_no != sr:
-                    item.sr_no = sr
-                    item.save()
+                item.invoice = invoice
+                item.sr_no = sr        # ← must be set BEFORE .save()
+                item.save()
                 sr += 1
 
             messages.success(request, f'Invoice {invoice.invoice_number} updated!')

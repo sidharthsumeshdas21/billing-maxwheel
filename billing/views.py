@@ -122,14 +122,22 @@ def invoice_edit(request, pk):
         formset = LineItemFormSet(request.POST, instance=invoice)
         if form.is_valid() and formset.is_valid():
             invoice = form.save()
-            # Save new/changed items first (this also populates deleted_objects)
-            formset.save(commit=False)
-            # Delete removed items
+
+            # save(commit=False) populates deleted_objects, changed_objects, new_objects
+            # but does NOT write to DB yet. Returns list of new + changed instances.
+            items_to_save = formset.save(commit=False)
+
+            # 1. Delete removed items
             for obj in formset.deleted_objects:
                 if obj.pk:
                     obj.delete()
-            # Save and re-number ALL remaining items based on formset order
-            # formset.forms preserves the user's input/visual order
+
+            # 2. Save new/changed items (set invoice FK for new items)
+            for item in items_to_save:
+                item.invoice = invoice
+                item.save()
+
+            # 3. Re-number ALL surviving items in the order they appeared in the form
             sr = 1
             for f in formset.forms:
                 if f in formset.deleted_forms:
@@ -137,10 +145,11 @@ def invoice_edit(request, pk):
                 if not f.cleaned_data or not f.cleaned_data.get('product_name'):
                     continue
                 item = f.instance
-                item.invoice = invoice
-                item.sr_no = sr
-                item.save()
+                if item.pk and item.sr_no != sr:
+                    item.sr_no = sr
+                    item.save()
                 sr += 1
+
             messages.success(request, f'Invoice {invoice.invoice_number} updated!')
             return redirect('invoice_detail', pk=invoice.pk)
     else:
@@ -153,6 +162,7 @@ def invoice_edit(request, pk):
         'title': f'Edit Invoice {invoice.invoice_number}',
         'action': 'Update',
     })
+
 
 
 # ─── Invoice Delete ──────────────────────────────────────────────────────────

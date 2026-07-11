@@ -13,6 +13,12 @@ urlpatterns = [
     # Invoice print — kept server-rendered (CSS/layout precision for PDF)
     path('invoices/<int:pk>/print/', views.invoice_print, name='invoice_print'),
 
-    # SPA shell — all other billing routes served by the JS app
-    path('', views.app_shell, name='app_shell'),
+    # Backward-compatible named URLs so workers templates (base.html) don't break
+    path('invoices/', views.app_shell, name='invoice_list'),
+    path('invoices/new/', views.app_shell, name='invoice_create'),
+    path('customers/', views.app_shell, name='customer_list'),
+    path('customers/new/', views.app_shell, name='customer_create'),
+
+    # SPA shell — catch-all for billing routes
+    path('', views.app_shell, name='dashboard'),
 ]

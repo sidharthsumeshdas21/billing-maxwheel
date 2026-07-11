@@ -296,6 +296,12 @@ const ROUTES = [
 let _chartInst = null;
 
 async function route() {
+  // If hash is empty but pathname is not root, set hash to pathname so SPA router loads correct view
+  if (!location.hash && location.pathname !== '/') {
+    location.hash = location.pathname;
+    return;
+  }
+
   // Normalize: strip hash prefix and trailing slashes
   let path = location.hash.replace(/^#/, '') || '/';
   if (path !== '/' && path.endsWith('/')) path = path.slice(0, -1);

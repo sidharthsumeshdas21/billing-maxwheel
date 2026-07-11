@@ -131,7 +131,7 @@ class InvoiceViewSet(viewsets.ModelViewSet):
 # ─── SPA shell ───────────────────────────────────────────────────────────────
 
 @login_required
-def app_shell(request):
+def app_shell(request, *args, **kwargs):
     """Serves the single-page app. All billing UI routing is done client-side."""
     return render(request, 'billing/app.html', {
         'settings': settings,

@@ -1,0 +1,1057 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MaxWheel Billing</title>
+  <meta name="description" content="MaxWheel Auto Services — Invoice & Customer Management">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  {% load static %}
+  <link rel="stylesheet" href="{% static 'style.css' %}">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    /* ── SPA additions ─────────────────────────────────────── */
+    :root { --orange: #e8610a; --orange-dim: rgba(232,97,10,.15); }
+
+    /* Loading */
+    .page-loading { display:flex; align-items:center; justify-content:center; min-height:320px; }
+    .spin { width:36px; height:36px; border:3px solid var(--border,#2a2a2a);
+            border-top-color:var(--orange); border-radius:50%; animation:spin .7s linear infinite; }
+    @keyframes spin { to { transform:rotate(360deg); } }
+
+    /* Toast */
+    #toast { position:fixed; bottom:28px; right:28px; z-index:9999;
+             padding:12px 20px; border-radius:8px; font-size:.875rem; font-weight:500;
+             background:#1e1e1e; color:#f0f0f0; border:1px solid #333;
+             box-shadow:0 8px 32px rgba(0,0,0,.5);
+             transform:translateY(20px); opacity:0; pointer-events:none;
+             transition:all .25s ease; max-width:360px; }
+    #toast.show { transform:translateY(0); opacity:1; }
+    #toast.ok  { border-color:var(--orange); background:#1a1000; color:#f5a623; }
+    #toast.err { border-color:#c0392b; background:#1a0000; color:#e74c3c; }
+
+    /* Stats grid */
+    .stats-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:16px; margin-bottom:24px; }
+    .stat-card { background:var(--bg-800,#1a1a1a); border:1px solid var(--border,#2a2a2a);
+                 border-radius:var(--r,10px); padding:22px 20px; }
+    .stat-label { font-size:.73rem; font-weight:600; letter-spacing:.06em; text-transform:uppercase;
+                  color:var(--t-500,#777); margin-bottom:8px; }
+    .stat-value { font-size:1.8rem; font-weight:800; color:var(--orange); font-variant-numeric:tabular-nums; }
+
+    /* Clickable rows */
+    tr.clickable { cursor:pointer; transition:background .15s; }
+    tr.clickable:hover { background:var(--bg-750,#1e1e1e) !important; }
+
+    /* Icon button (edit in table) */
+    .icon-btn { background:none; border:1px solid transparent; border-radius:6px; padding:5px 7px;
+                cursor:pointer; color:var(--t-500,#777); transition:all .15s; line-height:0; }
+    .icon-btn:hover { border-color:var(--border,#333); color:var(--orange); }
+    .icon-btn svg { display:block; }
+
+    /* Add row button */
+    .add-row-btn { margin-top:12px; display:flex; align-items:center; gap:6px; background:none;
+                   border:1px dashed var(--border,#333); border-radius:8px; padding:8px 16px;
+                   color:var(--t-500,#777); font-size:.83rem; cursor:pointer; transition:all .2s;
+                   width:100%; justify-content:center; }
+    .add-row-btn:hover { border-color:var(--orange); color:var(--orange); }
+    .add-row-btn svg { width:14px; height:14px; stroke:currentColor; fill:none;
+                       stroke-width:2; stroke-linecap:round; }
+
+    /* Line item table */
+    .li-table { width:100%; border-collapse:collapse; }
+    .li-table th { background:var(--bg-750,#1e1e1e); font-size:.73rem; font-weight:600;
+                   letter-spacing:.05em; text-transform:uppercase; color:var(--t-500,#777);
+                   padding:8px 10px; border-bottom:1px solid var(--border,#2a2a2a); white-space:nowrap; }
+    .li-table td { padding:4px 6px; border-bottom:1px solid var(--border,#2a2a2a); vertical-align:middle; }
+    .li-table .td-sr { text-align:center; color:var(--t-500,#777); font-size:.8rem; width:32px; }
+    .li-table .td-amount { text-align:right; font-weight:600; font-variant-numeric:tabular-nums;
+                           color:var(--t-100,#eee); white-space:nowrap; padding-right:12px; }
+    .li-table .th-right { text-align:right; }
+    .li-del-btn { background:none; border:none; color:var(--t-600,#555); cursor:pointer;
+                  padding:5px; border-radius:4px; transition:color .15s; line-height:0; }
+    .li-del-btn:hover { color:#e74c3c; }
+    .li-del-btn svg { width:14px; height:14px; stroke:currentColor; fill:none;
+                      stroke-width:2.5; stroke-linecap:round; display:block; }
+    .li-table .form-input { padding:6px 8px; font-size:.83rem; }
+
+    /* Detail labels */
+    .detail-label { font-size:.7rem; font-weight:700; letter-spacing:.07em; text-transform:uppercase;
+                    color:var(--t-500,#777); margin-bottom:4px; }
+    .divider { border:none; border-top:1px solid var(--border,#2a2a2a); margin:20px 0; }
+
+    /* Text helpers */
+    .text-mono { font-variant-numeric:tabular-nums; }
+    .text-right { text-align:right; }
+    .fw-600 { font-weight:600; }
+    .text-dim { color:var(--t-500,#777); }
+    .text-orange { color:var(--orange); }
+
+    /* Empty state */
+    .empty-state { display:flex; flex-direction:column; align-items:center; justify-content:center;
+                   min-height:220px; gap:10px; color:var(--t-600,#555); }
+    .empty-state h2 { font-size:1.1rem; color:var(--t-400,#888); }
+    .empty-state p { font-size:.875rem; }
+
+    /* Totals */
+    .totals-panel { background:var(--bg-800,#1a1a1a); border:1px solid var(--border,#2a2a2a);
+                    border-radius:var(--r,10px); padding:16px 20px; min-width:260px; }
+    .totals-row { display:flex; justify-content:space-between; align-items:center;
+                  padding:6px 0; border-bottom:1px solid var(--border,#222); font-size:.875rem; }
+    .totals-row:last-child { border-bottom:none; }
+    .totals-row.grand { margin-top:4px; padding-top:10px; }
+    .totals-row.grand .tr-label,
+    .totals-row.grand .tr-val { font-size:1.1rem; font-weight:700; color:var(--orange); }
+    .tr-label { color:var(--t-500,#777); }
+    .tr-val { font-weight:600; font-variant-numeric:tabular-nums; color:var(--t-100,#eee); }
+
+    /* Responsive form grid */
+    .form-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:14px; }
+
+    /* Nav active state override */
+    .nav-item .active { color:var(--orange) !important; background:var(--orange-dim) !important; }
+  </style>
+</head>
+<body>
+
+<!-- ── Sidebar ──────────────────────────────────────────────────────────── -->
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-mark">MW</div>
+    <div>
+      <div class="logo-name">MaxWheel</div>
+      <div class="logo-sub">Billing System</div>
+    </div>
+  </div>
+
+  <nav class="sidebar-nav">
+    <div class="nav-section-label">Main</div>
+
+    <a class="nav-item" data-route="/dashboard" href="#/dashboard">
+      <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+      Dashboard
+    </a>
+
+    <div class="nav-section-label" style="margin-top:16px">Invoices</div>
+
+    <a class="nav-item" data-route="/invoices" href="#/invoices">
+      <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+      All Invoices
+    </a>
+
+    <a class="nav-item" data-route="/invoices/new" href="#/invoices/new">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+      New Invoice
+    </a>
+
+    <div class="nav-section-label" style="margin-top:16px">Customers</div>
+
+    <a class="nav-item" data-route="/customers" href="#/customers">
+      <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      All Customers
+    </a>
+
+    <a class="nav-item" data-route="/customers/new" href="#/customers/new">
+      <svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>
+      New Customer
+    </a>
+
+    <div class="nav-section-label" style="margin-top:16px">Workers</div>
+
+    <a class="nav-item" href="/workers/">
+      <svg viewBox="0 0 24 24"><path d="M20 7H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z"/><path d="M16 3H8l-2 4h12z"/></svg>
+      Workers
+    </a>
+
+    <a class="nav-item" href="/workers/logs/">
+      <svg viewBox="0 0 24 24"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+      Work Logs
+    </a>
+  </nav>
+
+  <div class="sidebar-footer">
+    <div class="sidebar-user">
+      <div class="user-avatar">{{ user.username|slice:":1"|upper }}</div>
+      <div class="user-info">
+        <div class="user-name">{{ user.username }}</div>
+        <a href="/logout/" class="user-role">Sign out</a>
+      </div>
+    </div>
+  </div>
+</aside>
+
+<!-- ── Main ─────────────────────────────────────────────────────────────── -->
+<div class="main-wrap">
+  <header class="topbar">
+    <div id="topbar-title" class="topbar-title">Dashboard</div>
+    <div class="topbar-right">
+      <span class="topbar-badge">{{ settings.COMPANY_NAME }}</span>
+    </div>
+  </header>
+
+  <main class="content-area" id="content">
+    <div class="page-loading"><div class="spin"></div></div>
+  </main>
+</div>
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<script>
+/* ═══════════════════════════════════════════════════════════════════════════
+   MaxWheel Billing — SPA
+   Routes: #/dashboard  #/invoices  #/invoices/new
+           #/invoices/:id  #/invoices/:id/edit
+           #/customers  #/customers/new  #/customers/:id/edit
+   API:    /api/invoices/   /api/customers/   /api/invoices/dashboard/
+           /api/invoices/next-number/
+══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Utils ─────────────────────────────────────────────────────────────── */
+const fmt  = n => '\u20b9' + Number(n).toFixed(2);
+const fmtK = n => '\u20b9' + Number(n).toLocaleString('en-IN', {maximumFractionDigits: 0});
+
+function fmtDate(d) {
+  if (!d) return '\u2014';
+  const [y, m, day] = d.split('-');
+  const M = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return `${parseInt(day)} ${M[parseInt(m)-1]} ${y}`;
+}
+
+function todayISO() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+/* ── CSRF ──────────────────────────────────────────────────────────────── */
+function csrf() {
+  const m = document.cookie.match(/csrftoken=([^;]+)/);
+  return m ? m[1] : '';
+}
+
+/* ── API fetch wrapper ─────────────────────────────────────────────────── */
+async function api(method, url, body) {
+  const opts = {
+    method,
+    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf() },
+    credentials: 'same-origin',
+  };
+  if (body !== undefined) opts.body = JSON.stringify(body);
+  const res = await fetch(url, opts);
+  if (res.status === 401) { location.href = '/login/'; return; }
+  if (res.status === 204) return null;
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw data;
+  return data;
+}
+
+/* ── Toast ─────────────────────────────────────────────────────────────── */
+let _toastTimer;
+function toast(msg, type) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'show ' + (type === 'error' ? 'err' : 'ok');
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => { el.className = ''; }, 3500);
+}
+
+/* ── Navigation ────────────────────────────────────────────────────────── */
+function go(path) { location.hash = path; }
+window.go = go;
+
+/* ── Router ────────────────────────────────────────────────────────────── */
+const ROUTES = [
+  [/^\/?$|^\/dashboard$/, () => pgDashboard()],
+  [/^\/invoices$/, () => pgInvoiceList()],
+  [/^\/invoices\/new$/, () => pgInvoiceForm(null)],
+  [/^\/invoices\/(\d+)\/edit$/, m => pgInvoiceForm(m[1])],
+  [/^\/invoices\/(\d+)$/, m => pgInvoiceDetail(m[1])],
+  [/^\/customers$/, () => pgCustomerList()],
+  [/^\/customers\/new$/, () => pgCustomerForm(null)],
+  [/^\/customers\/(\d+)\/edit$/, m => pgCustomerForm(m[1])],
+];
+
+let _chartInst = null;
+
+async function route() {
+  const path = location.hash.replace(/^#/, '') || '/';
+
+  // Destroy previous chart instance to prevent canvas reuse error
+  if (_chartInst) { _chartInst.destroy(); _chartInst = null; }
+
+  // Highlight active nav links
+  document.querySelectorAll('.nav-item[data-route]').forEach(a => {
+    const r = a.dataset.route;
+    a.classList.toggle('active', path === r || (r !== '/dashboard' && path.startsWith(r) && r !== '/invoices/new' && r !== '/customers/new') || (r === '/dashboard' && (path === '/' || path === '/dashboard')));
+  });
+
+  // Show spinner
+  const el = document.getElementById('content');
+  el.innerHTML = '<div class="page-loading"><div class="spin"></div></div>';
+
+  for (const [re, fn] of ROUTES) {
+    const m = path.match(re);
+    if (m) {
+      try { await fn(m); }
+      catch (e) {
+        console.error(e);
+        const msg = e && (e.detail || Object.values(e).flat().join(' ')) || 'Something went wrong.';
+        el.innerHTML = `<div class="empty-state"><h2>Error</h2><p>${msg}</p></div>`;
+        toast(msg, 'error');
+      }
+      return;
+    }
+  }
+  el.innerHTML = '<div class="empty-state"><h2>404</h2><p>Page not found.</p></div>';
+}
+
+window.addEventListener('hashchange', route);
+window.addEventListener('DOMContentLoaded', route);
+
+/* ══════════════════════════════════════════════════════════════════════════
+   PAGES
+══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Dashboard ─────────────────────────────────────────────────────────── */
+async function pgDashboard() {
+  const d = await api('GET', '/api/invoices/dashboard/');
+  const el = document.getElementById('content');
+
+  el.innerHTML = `
+    <div class="page-header">
+      <div>
+        <h1>Dashboard</h1>
+        <div class="sub">FY ${d.fy_label} &nbsp;&middot;&nbsp; Overview</div>
+      </div>
+      <div class="page-header-actions">
+        <button class="btn btn-primary" onclick="go('/invoices/new')">
+          <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          New Invoice
+        </button>
+      </div>
+    </div>
+
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-label">FY Revenue</div>
+        <div class="stat-value">${fmtK(d.fy_revenue)}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Total Invoices</div>
+        <div class="stat-value">${d.total_invoices}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Customers</div>
+        <div class="stat-value">${d.total_customers}</div>
+      </div>
+    </div>
+
+    <div class="card mb-4">
+      <div class="card-header"><span class="card-title">Monthly Revenue &mdash; FY ${d.fy_label}</span></div>
+      <div class="card-body"><canvas id="rev-chart" height="180"></canvas></div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Recent Invoices</span>
+        <a href="#/invoices" class="btn btn-secondary btn-sm">View All</a>
+      </div>
+      <div class="card-body" style="padding:0">
+        ${d.recent_invoices.length === 0 ? '<div class="empty-state"><p>No invoices yet.</p></div>' : `
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead><tr>
+              <th>Invoice</th><th>Date</th><th>Customer</th>
+              <th>Vehicle</th><th class="text-right">Total</th>
+            </tr></thead>
+            <tbody>
+              ${d.recent_invoices.map(inv => `
+                <tr class="clickable" onclick="go('/invoices/${inv.id}')">
+                  <td class="fw-600 text-orange">${inv.invoice_number}</td>
+                  <td class="text-dim">${fmtDate(inv.invoice_date)}</td>
+                  <td>${inv.customer_name}</td>
+                  <td class="text-dim">${[inv.car_number, inv.car_model].filter(Boolean).join(' \u00b7 ') || '\u2014'}</td>
+                  <td class="text-right fw-600 text-mono">${fmt(inv.total)}</td>
+                </tr>`).join('')}
+            </tbody>
+          </table>
+        </div>`}
+      </div>
+    </div>`;
+
+  // Chart.js bar chart
+  const ctx = document.getElementById('rev-chart').getContext('2d');
+  _chartInst = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: d.monthly_data.map(m => m.month),
+      datasets: [{
+        data: d.monthly_data.map(m => m.revenue),
+        backgroundColor: 'rgba(232,97,10,.65)',
+        borderColor: '#e8610a',
+        borderWidth: 1,
+        borderRadius: 5,
+        hoverBackgroundColor: 'rgba(232,97,10,.9)',
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { display: false }, tooltip: {
+        callbacks: { label: ctx => ' \u20b9' + ctx.parsed.y.toLocaleString('en-IN') }
+      }},
+      scales: {
+        y: {
+          ticks: { color: '#666', callback: v => '\u20b9' + Number(v).toLocaleString('en-IN') },
+          grid: { color: 'rgba(255,255,255,.04)' }
+        },
+        x: { ticks: { color: '#666' }, grid: { display: false } }
+      }
+    }
+  });
+}
+
+/* ── Invoice List ──────────────────────────────────────────────────────── */
+async function pgInvoiceList(q) {
+  q = q === undefined ? (new URLSearchParams(location.search).get('q') || '') : q;
+  const url = q ? `/api/invoices/?q=${encodeURIComponent(q)}` : '/api/invoices/';
+  const invs = await api('GET', url);
+  const el = document.getElementById('content');
+
+  el.innerHTML = `
+    <div class="page-header">
+      <div><h1>Invoices</h1><div class="sub">${invs.length} invoice${invs.length !== 1 ? 's' : ''}</div></div>
+      <div class="page-header-actions">
+        <button class="btn btn-primary" onclick="go('/invoices/new')">
+          <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          New Invoice
+        </button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header" style="gap:12px">
+        <input id="inv-search" class="form-input" placeholder="Search invoice #, customer, vehicle\u2026" value="${q}" style="max-width:340px">
+      </div>
+      <div class="card-body" style="padding:0">
+        ${invs.length === 0
+          ? '<div class="empty-state"><p>No invoices found.</p></div>'
+          : `<div class="table-wrap"><table class="data-table">
+              <thead><tr>
+                <th>Invoice #</th><th>Date</th><th>Customer</th>
+                <th>Vehicle</th><th class="text-right">Total</th><th></th>
+              </tr></thead>
+              <tbody>
+                ${invs.map(inv => `
+                  <tr class="clickable" onclick="go('/invoices/${inv.id}')">
+                    <td class="fw-600 text-orange">${inv.invoice_number}</td>
+                    <td class="text-dim">${fmtDate(inv.invoice_date)}</td>
+                    <td>${inv.customer_name}</td>
+                    <td class="text-dim">${[inv.car_number, inv.car_model].filter(Boolean).join(' \u00b7') || '\u2014'}</td>
+                    <td class="text-right fw-600 text-mono">${fmt(inv.total)}</td>
+                    <td>
+                      <button class="icon-btn" title="Edit"
+                        onclick="event.stopPropagation();go('/invoices/${inv.id}/edit')">
+                        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                          <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                        </svg>
+                      </button>
+                    </td>
+                  </tr>`).join('')}
+              </tbody>
+            </table></div>`}
+      </div>
+    </div>`;
+
+  let _t;
+  document.getElementById('inv-search')?.addEventListener('input', e => {
+    clearTimeout(_t);
+    _t = setTimeout(() => pgInvoiceList(e.target.value.trim()), 280);
+  });
+}
+
+/* ── Invoice Form (create + edit) ──────────────────────────────────────── */
+async function pgInvoiceForm(id) {
+  const isEdit = !!id;
+  const [customers, invoice, numData] = await Promise.all([
+    api('GET', '/api/customers/'),
+    isEdit ? api('GET', `/api/invoices/${id}/`) : Promise.resolve(null),
+    !isEdit ? api('GET', '/api/invoices/next-number/') : Promise.resolve(null),
+  ]);
+
+  const inv = invoice || {};
+  const initItems = (inv.line_items && inv.line_items.length)
+    ? inv.line_items
+    : [{ id: null, product_name: '', quantity: '1', unit: 'PCS', rate: '' }];
+
+  const el = document.getElementById('content');
+  el.innerHTML = `
+    <div class="page-header">
+      <div>
+        <h1>${isEdit ? 'Edit Invoice' : 'New Invoice'}</h1>
+        <div class="sub">${isEdit ? inv.invoice_number : 'Fill in details and add line items'}</div>
+      </div>
+      <div class="page-header-actions">
+        <button class="btn btn-secondary" onclick="history.back()">
+          <svg viewBox="0 0 24 24"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+          Back
+        </button>
+      </div>
+    </div>
+
+    <form id="inv-form" autocomplete="off" novalidate>
+
+      <!-- Invoice header details -->
+      <div class="card mb-4">
+        <div class="card-header"><span class="card-title">Invoice Details</span></div>
+        <div class="card-body">
+          <div class="form-grid">
+            <div class="form-group">
+              <label class="form-label">Invoice Number <span class="req">*</span></label>
+              <input name="invoice_number" class="form-input" required
+                value="${inv.invoice_number || numData?.next_number || ''}"
+                placeholder="e.g. 42/26-27">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Invoice Date <span class="req">*</span></label>
+              <input name="invoice_date" type="date" class="form-input" required
+                value="${inv.invoice_date || todayISO()}">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Customer <span class="req">*</span></label>
+              <select name="customer" class="form-input" required>
+                <option value="">&mdash; Select Customer &mdash;</option>
+                ${customers.map(c =>
+                  `<option value="${c.id}" ${inv.customer == c.id ? 'selected' : ''}>${c.name}</option>`
+                ).join('')}
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Vehicle Number</label>
+              <input name="car_number" class="form-input" placeholder="GJ01 RS 1098"
+                value="${inv.car_number || ''}">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Vehicle Model</label>
+              <input name="car_model" class="form-input" placeholder="XUV500"
+                value="${inv.car_model || ''}">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Discount (&#8377;)</label>
+              <input name="discount" type="number" step="0.01" min="0" class="form-input"
+                placeholder="0.00" value="${inv.discount || '0'}">
+            </div>
+          </div>
+          <div class="form-group" style="margin-top:14px">
+            <label class="form-label">Notes</label>
+            <textarea name="notes" class="form-input" rows="2"
+              placeholder="Optional notes">${inv.notes || ''}</textarea>
+          </div>
+        </div>
+      </div>
+
+      <!-- Line Items -->
+      <div class="card mb-4">
+        <div class="card-header">
+          <span class="card-title">Line Items</span>
+          <span class="text-dim" style="font-size:.77rem">At least one item required</span>
+        </div>
+        <div class="card-body" style="padding-bottom:14px">
+          <div class="table-wrap">
+            <table class="li-table">
+              <thead><tr>
+                <th style="width:32px">#</th>
+                <th>Description / Product</th>
+                <th style="width:88px">Qty</th>
+                <th style="width:76px">Unit</th>
+                <th style="width:108px">Rate (&#8377;)</th>
+                <th class="th-right" style="width:108px">Amount (&#8377;)</th>
+                <th style="width:32px"></th>
+              </tr></thead>
+              <tbody id="li-body">
+                ${initItems.map((it, i) => liRow(i, it)).join('')}
+              </tbody>
+            </table>
+          </div>
+          <button type="button" id="add-row" class="add-row-btn">
+            <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Add Line Item
+          </button>
+        </div>
+      </div>
+
+      <!-- Totals + Submit -->
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap">
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <button type="submit" id="submit-btn" class="btn btn-primary" style="min-width:180px;justify-content:center">
+            <svg viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+            ${isEdit ? 'Update Invoice' : 'Create Invoice'}
+          </button>
+          ${isEdit ? `
+            <button type="button" class="btn btn-danger btn-sm" style="justify-content:center"
+              onclick="deleteInvoice(${id})">
+              <svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/>
+                <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+                <path d="M10 11v6"/><path d="M14 11v6"/>
+                <path d="M9 6V4h6v2"/>
+              </svg>
+              Delete Invoice
+            </button>` : ''}
+        </div>
+        <div class="totals-panel">
+          <div class="totals-row">
+            <span class="tr-label">Subtotal</span>
+            <span id="t-sub" class="tr-val">&#8377;0.00</span>
+          </div>
+          <div class="totals-row">
+            <span class="tr-label">Discount</span>
+            <span id="t-disc" class="tr-val">&#8377;0.00</span>
+          </div>
+          <div class="totals-row grand">
+            <span class="tr-label">Total</span>
+            <span id="t-total" class="tr-val">&#8377;0.00</span>
+          </div>
+        </div>
+      </div>
+    </form>`;
+
+  recalc();
+
+  // Add row
+  document.getElementById('add-row').addEventListener('click', () => {
+    const tbody = document.getElementById('li-body');
+    const idx = tbody.querySelectorAll('.li-row').length;
+    tbody.insertAdjacentHTML('beforeend', liRow(idx, { id: null, product_name: '', quantity: '1', unit: 'PCS', rate: '' }));
+    renumber();
+    tbody.querySelector('.li-row:last-child .li-product')?.focus();
+  });
+
+  // Live recalc
+  document.getElementById('inv-form').addEventListener('input', e => {
+    const n = e.target.name || '';
+    if (n === 'li_qty' || n === 'li_rate' || n === 'discount') recalc();
+  });
+
+  // Delete row
+  document.getElementById('li-body').addEventListener('click', e => {
+    const btn = e.target.closest('.li-del-btn');
+    if (!btn) return;
+    const rows = document.querySelectorAll('#li-body .li-row');
+    if (rows.length <= 1) { toast('At least one line item is required', 'error'); return; }
+    btn.closest('.li-row').remove();
+    renumber();
+    recalc();
+  });
+
+  // Submit
+  document.getElementById('inv-form').addEventListener('submit', async e => {
+    e.preventDefault();
+    const btn = document.getElementById('submit-btn');
+    btn.disabled = true;
+    const orig = btn.innerHTML;
+    btn.innerHTML = '<span style="opacity:.6">Saving\u2026</span>';
+
+    try {
+      const payload = collectForm();
+      if (!payload.customer) { throw { customer: ['Please select a customer.'] }; }
+      if (!payload.line_items.length) { throw { line_items: ['At least one item required.'] }; }
+
+      if (isEdit) {
+        await api('PUT', `/api/invoices/${id}/`, payload);
+        toast('Invoice updated successfully!');
+        go(`/invoices/${id}`);
+      } else {
+        const created = await api('POST', '/api/invoices/', payload);
+        toast('Invoice created!');
+        go(`/invoices/${created.id}`);
+      }
+    } catch (err) {
+      btn.disabled = false;
+      btn.innerHTML = orig;
+      const msg = (err && (err.detail || Object.values(err).flat().join(' '))) || 'Save failed. Check all fields.';
+      toast(msg, 'error');
+    }
+  });
+}
+
+/* ── Line item row HTML ─────────────────────────────────────────────────── */
+const UNITS = ['PCS', 'NOS', 'LTR', 'KG', 'MTR', 'SET', '-'];
+
+function liRow(idx, item) {
+  const unitOpts = UNITS.map(u =>
+    `<option${u === (item.unit || 'PCS') ? ' selected' : ''}>${u}</option>`
+  ).join('');
+  return `
+    <tr class="li-row">
+      <td class="td-sr">${idx + 1}</td>
+      <td><input class="form-input li-product" name="li_prod" placeholder="Product / Service"
+           value="${item.product_name || ''}"></td>
+      <td><input class="form-input li-qty" name="li_qty" type="number"
+           step="0.01" min="0.01" placeholder="1" value="${item.quantity || '1'}"></td>
+      <td><select class="form-input li-unit" name="li_unit">${unitOpts}</select></td>
+      <td><input class="form-input li-rate" name="li_rate" type="number"
+           step="0.01" min="0" placeholder="0.00" value="${item.rate || ''}"></td>
+      <td class="td-amount">\u2014</td>
+      <td>
+        <input type="hidden" name="li_id" value="${item.id || ''}">
+        <button type="button" class="li-del-btn" title="Remove row">
+          <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </td>
+    </tr>`;
+}
+
+function renumber() {
+  document.querySelectorAll('#li-body .li-row').forEach((row, i) => {
+    const sr = row.querySelector('.td-sr');
+    if (sr) sr.textContent = i + 1;
+  });
+}
+
+function recalc() {
+  let sub = 0;
+  document.querySelectorAll('#li-body .li-row').forEach(row => {
+    const qty  = parseFloat(row.querySelector('.li-qty')?.value)  || 0;
+    const rate = parseFloat(row.querySelector('.li-rate')?.value) || 0;
+    const amt  = qty * rate;
+    sub += amt;
+    const amtEl = row.querySelector('.td-amount');
+    if (amtEl) amtEl.textContent = amt > 0 ? fmt(amt) : '\u2014';
+  });
+  const disc = parseFloat(document.querySelector('[name=discount]')?.value) || 0;
+  const tSub = document.getElementById('t-sub');
+  const tDisc = document.getElementById('t-disc');
+  const tTotal = document.getElementById('t-total');
+  if (tSub)   tSub.textContent   = fmt(sub);
+  if (tDisc)  tDisc.textContent  = fmt(disc);
+  if (tTotal) tTotal.textContent = fmt(sub - disc);
+}
+
+function collectForm() {
+  const f = document.getElementById('inv-form');
+  const line_items = [];
+  document.querySelectorAll('#li-body .li-row').forEach(row => {
+    const name = row.querySelector('.li-prod')?.value.trim()
+               || row.querySelector('[name=li_prod]')?.value.trim() || '';
+    if (!name) return;
+    const rawId = row.querySelector('[name=li_id]')?.value;
+    line_items.push({
+      id:           rawId ? parseInt(rawId) : null,
+      product_name: name,
+      quantity:     row.querySelector('.li-qty')?.value || '1',
+      unit:         row.querySelector('.li-unit')?.value || 'PCS',
+      rate:         row.querySelector('.li-rate')?.value || '0',
+    });
+  });
+  return {
+    invoice_number: f.querySelector('[name=invoice_number]').value.trim(),
+    invoice_date:   f.querySelector('[name=invoice_date]').value,
+    customer:       parseInt(f.querySelector('[name=customer]').value) || null,
+    car_number:     f.querySelector('[name=car_number]').value.trim(),
+    car_model:      f.querySelector('[name=car_model]').value.trim(),
+    discount:       f.querySelector('[name=discount]').value || '0',
+    notes:          f.querySelector('[name=notes]').value.trim(),
+    line_items,
+  };
+}
+
+/* ── Invoice Detail ────────────────────────────────────────────────────── */
+async function pgInvoiceDetail(id) {
+  const inv = await api('GET', `/api/invoices/${id}/`);
+  const el = document.getElementById('content');
+
+  el.innerHTML = `
+    <div class="page-header">
+      <div>
+        <h1>Invoice <span class="text-orange">${inv.invoice_number}</span></h1>
+        <div class="sub">${fmtDate(inv.invoice_date)}</div>
+      </div>
+      <div class="page-header-actions">
+        <button class="btn btn-secondary" onclick="go('/invoices')">
+          <svg viewBox="0 0 24 24"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+          Back
+        </button>
+        <a href="/invoices/${id}/print/" target="_blank" class="btn btn-secondary">
+          <svg viewBox="0 0 24 24"><polyline points="6 9 6 2 18 2 18 9"/>
+            <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>
+            <rect x="6" y="14" width="12" height="8"/>
+          </svg>
+          Print / PDF
+        </a>
+        <button class="btn btn-primary" onclick="go('/invoices/${id}/edit')">
+          <svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+          </svg>
+          Edit
+        </button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-body">
+
+        <!-- Customer + Meta -->
+        <div style="display:grid;grid-template-columns:1fr auto;gap:24px;margin-bottom:20px">
+          <div>
+            <div class="detail-label">Bill To</div>
+            <div style="font-size:1.1rem;font-weight:700;color:var(--t-100);margin-bottom:4px">${inv.customer_name}</div>
+            ${inv.customer_address ? `<div class="text-dim" style="font-size:.82rem">${inv.customer_address}</div>` : ''}
+            ${inv.customer_mobile  ? `<div class="text-dim" style="font-size:.82rem;margin-top:2px">${inv.customer_mobile}</div>` : ''}
+            ${inv.customer_email   ? `<div class="text-dim" style="font-size:.82rem">${inv.customer_email}</div>` : ''}
+          </div>
+          <div style="text-align:right">
+            <div class="detail-label">Invoice No.</div>
+            <div style="font-size:1.25rem;font-weight:800;color:var(--orange);margin-bottom:10px">${inv.invoice_number}</div>
+            <div class="detail-label">Date</div>
+            <div style="font-weight:600;color:var(--t-100)">${fmtDate(inv.invoice_date)}</div>
+          </div>
+        </div>
+
+        ${inv.car_number || inv.car_model ? `
+        <div style="display:flex;gap:24px;margin-bottom:20px;padding:12px 16px;
+                    background:var(--bg-750);border-radius:8px;border:1px solid var(--border)">
+          ${inv.car_number ? `<div><div class="detail-label">Vehicle No.</div>
+            <div style="font-weight:600;color:var(--t-100)">${inv.car_number}</div></div>` : ''}
+          ${inv.car_model  ? `<div><div class="detail-label">Model</div>
+            <div style="font-weight:600;color:var(--t-100)">${inv.car_model}</div></div>` : ''}
+        </div>` : ''}
+
+        <!-- Items table -->
+        <div class="table-wrap" style="margin-bottom:20px">
+          <table class="data-table">
+            <thead><tr>
+              <th style="width:36px">#</th>
+              <th>Description</th>
+              <th class="text-right">Qty</th>
+              <th>Unit</th>
+              <th class="text-right">Rate</th>
+              <th class="text-right">Amount</th>
+            </tr></thead>
+            <tbody>
+              ${inv.line_items.map(it => `
+                <tr>
+                  <td class="text-dim">${it.sr_no}</td>
+                  <td class="fw-600">${it.product_name}</td>
+                  <td class="text-right text-mono">${it.quantity}</td>
+                  <td class="text-dim">${it.unit}</td>
+                  <td class="text-right text-mono">${Number(it.rate).toFixed(2)}</td>
+                  <td class="text-right fw-600 text-mono">${Number(it.amount).toFixed(2)}</td>
+                </tr>`).join('')}
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Totals -->
+        <div style="display:flex;justify-content:flex-end">
+          <div class="totals-panel">
+            <div class="totals-row">
+              <span class="tr-label">Subtotal</span>
+              <span class="tr-val">${fmt(inv.subtotal)}</span>
+            </div>
+            ${Number(inv.discount) > 0 ? `
+            <div class="totals-row">
+              <span class="tr-label">Discount</span>
+              <span class="tr-val">\u2212${fmt(inv.discount)}</span>
+            </div>` : ''}
+            <div class="totals-row grand">
+              <span class="tr-label">Total</span>
+              <span class="tr-val">${fmt(inv.total)}</span>
+            </div>
+          </div>
+        </div>
+
+        ${inv.notes ? `<hr class="divider"><div class="detail-label">Notes</div>
+          <div style="font-size:.875rem;color:var(--t-400)">${inv.notes}</div>` : ''}
+
+        <!-- Delete action at bottom -->
+        <div style="margin-top:28px;padding-top:20px;border-top:1px solid var(--border);display:flex;justify-content:flex-end">
+          <button class="btn btn-danger btn-sm" onclick="deleteInvoice(${id})">
+            <svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/>
+              <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+            </svg>
+            Delete Invoice
+          </button>
+        </div>
+      </div>
+    </div>`;
+}
+
+/* ── Customer List ─────────────────────────────────────────────────────── */
+async function pgCustomerList(q) {
+  q = q === undefined ? '' : q;
+  const url = q ? `/api/customers/?q=${encodeURIComponent(q)}` : '/api/customers/';
+  const custs = await api('GET', url);
+  const el = document.getElementById('content');
+
+  el.innerHTML = `
+    <div class="page-header">
+      <div><h1>Customers</h1><div class="sub">${custs.length} customer${custs.length !== 1 ? 's' : ''}</div></div>
+      <div class="page-header-actions">
+        <button class="btn btn-primary" onclick="go('/customers/new')">
+          <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          New Customer
+        </button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header">
+        <input id="cust-search" class="form-input" placeholder="Search name, mobile, email\u2026"
+          value="${q}" style="max-width:340px">
+      </div>
+      <div class="card-body" style="padding:0">
+        ${custs.length === 0
+          ? '<div class="empty-state"><p>No customers found.</p></div>'
+          : `<div class="table-wrap"><table class="data-table">
+              <thead><tr>
+                <th>Name</th><th>Mobile</th><th>Address</th>
+                <th class="text-right">Invoices</th><th></th>
+              </tr></thead>
+              <tbody>
+                ${custs.map(c => `
+                  <tr>
+                    <td class="fw-600">${c.name}</td>
+                    <td class="text-dim">${c.mobile || '\u2014'}</td>
+                    <td class="text-dim">${c.address || '\u2014'}</td>
+                    <td class="text-right">${c.invoice_count}</td>
+                    <td>
+                      <button class="icon-btn" title="Edit" onclick="go('/customers/${c.id}/edit')">
+                        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor"
+                             stroke-width="2" stroke-linecap="round">
+                          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                          <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                        </svg>
+                      </button>
+                    </td>
+                  </tr>`).join('')}
+              </tbody>
+            </table></div>`}
+      </div>
+    </div>`;
+
+  let _t;
+  document.getElementById('cust-search')?.addEventListener('input', e => {
+    clearTimeout(_t);
+    _t = setTimeout(() => pgCustomerList(e.target.value.trim()), 280);
+  });
+}
+
+/* ── Customer Form ─────────────────────────────────────────────────────── */
+async function pgCustomerForm(id) {
+  const c = id ? await api('GET', `/api/customers/${id}/`) : {};
+  const el = document.getElementById('content');
+
+  el.innerHTML = `
+    <div class="page-header">
+      <div>
+        <h1>${id ? `Edit ${c.name}` : 'New Customer'}</h1>
+        <div class="sub">${id ? 'Update customer details' : 'Add a new customer'}</div>
+      </div>
+      <div class="page-header-actions">
+        <button class="btn btn-secondary" onclick="go('/customers')">
+          <svg viewBox="0 0 24 24"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+          Back
+        </button>
+      </div>
+    </div>
+
+    <div class="card" style="max-width:620px">
+      <div class="card-header"><span class="card-title">Customer Details</span></div>
+      <div class="card-body">
+        <form id="cust-form" novalidate>
+          <div class="form-grid">
+            <div class="form-group">
+              <label class="form-label">Name <span class="req">*</span></label>
+              <input name="name" class="form-input" required
+                placeholder="Customer / Company Name" value="${c.name || ''}">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Mobile</label>
+              <input name="mobile" class="form-input"
+                placeholder="Mobile number" value="${c.mobile || ''}">
+            </div>
+          </div>
+          <div class="form-group" style="margin-top:14px">
+            <label class="form-label">Address / City</label>
+            <input name="address" class="form-input"
+              placeholder="City / Address" value="${c.address || ''}">
+          </div>
+          <div class="form-group" style="margin-top:14px">
+            <label class="form-label">Email</label>
+            <input name="email" type="email" class="form-input"
+              placeholder="Email (optional)" value="${c.email || ''}">
+          </div>
+
+          <div style="display:flex;gap:10px;margin-top:22px;flex-wrap:wrap">
+            <button type="submit" id="cust-submit" class="btn btn-primary">
+              <svg viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+                <polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/>
+              </svg>
+              ${id ? 'Update' : 'Add'} Customer
+            </button>
+            ${id ? `
+              <button type="button" class="btn btn-danger" onclick="deleteCustomer(${id})">
+                <svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/>
+                  <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+                </svg>
+                Delete
+              </button>` : ''}
+          </div>
+        </form>
+      </div>
+    </div>`;
+
+  document.getElementById('cust-form').addEventListener('submit', async e => {
+    e.preventDefault();
+    const btn = document.getElementById('cust-submit');
+    btn.disabled = true;
+    const orig = btn.innerHTML;
+    btn.innerHTML = '<span style="opacity:.6">Saving\u2026</span>';
+    const f = e.target;
+    const payload = {
+      name:    f.querySelector('[name=name]').value.trim(),
+      mobile:  f.querySelector('[name=mobile]').value.trim(),
+      address: f.querySelector('[name=address]').value.trim(),
+      email:   f.querySelector('[name=email]').value.trim(),
+    };
+    try {
+      if (id) {
+        await api('PUT', `/api/customers/${id}/`, payload);
+        toast('Customer updated!');
+      } else {
+        await api('POST', '/api/customers/', payload);
+        toast('Customer added!');
+      }
+      go('/customers');
+    } catch (err) {
+      btn.disabled = false;
+      btn.innerHTML = orig;
+      const msg = (err && (err.detail || Object.values(err).flat().join(' '))) || 'Save failed.';
+      toast(msg, 'error');
+    }
+  });
+}
+
+/* ── Delete helpers (called from onclick) ──────────────────────────────── */
+window.deleteInvoice = async (id) => {
+  if (!confirm('Delete this invoice? This cannot be undone.')) return;
+  try {
+    await api('DELETE', `/api/invoices/${id}/`);
+    toast('Invoice deleted.');
+    go('/invoices');
+  } catch (e) {
+    toast((e && e.detail) || 'Delete failed.', 'error');
+  }
+};
+
+window.deleteCustomer = async (id) => {
+  if (!confirm('Delete this customer?\n\nCustomers with existing invoices cannot be deleted.')) return;
+  try {
+    await api('DELETE', `/api/customers/${id}/`);
+    toast('Customer deleted.');
+    go('/customers');
+  } catch (e) {
+    toast((e && e.detail) || 'Cannot delete — customer may have existing invoices.', 'error');
+  }
+};
+</script>
+
+</body>
+</html>

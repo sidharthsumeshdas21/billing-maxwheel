@@ -1,7 +1,8 @@
-﻿asgiref==3.11.1
+asgiref==3.11.1
 charset-normalizer==3.4.7
 dj-database-url==3.1.2
 Django==6.0.6
+djangorestframework==3.17.1
 docopt==0.6.2
 gunicorn==26.0.0
 num2words==0.5.14

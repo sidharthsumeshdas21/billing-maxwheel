@@ -1,257 +1,153 @@
-from django.shortcuts import render, redirect, get_object_or_404
+from django.shortcuts import render, get_object_or_404
 from django.contrib.auth.decorators import login_required
-from django.contrib import messages
-from django.http import HttpResponse
-from django.db.models import Q, Sum
-from django.utils import timezone
 from django.conf import settings
+from django.db.models import Q
+from django.utils import timezone
+
+from rest_framework import viewsets, status
+from rest_framework.decorators import action
+from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
+
 from .models import Customer, Invoice, LineItem
-from .forms import CustomerForm, InvoiceForm, LineItemFormSet
+from .serializers import (
+    CustomerSerializer,
+    InvoiceListSerializer,
+    InvoiceDetailSerializer,
+    InvoiceWriteSerializer,
+)
 import datetime
 
 
-# ─── Dashboard ──────────────────────────────────────────────────────────────
+# ─── Customer ViewSet ────────────────────────────────────────────────────────
 
-@login_required
-def dashboard(request):
-    today = timezone.now().date()
-    # Financial year boundaries
-    if today.month >= 4:
-        fy_start = datetime.date(today.year, 4, 1)
-        fy_end = datetime.date(today.year + 1, 3, 31)
-    else:
-        fy_start = datetime.date(today.year - 1, 4, 1)
-        fy_end = datetime.date(today.year, 3, 31)
+class CustomerViewSet(viewsets.ModelViewSet):
+    """CRUD for customers. Supports ?q= search."""
+    permission_classes = [IsAuthenticated]
+    serializer_class = CustomerSerializer
 
-    fy_invoices = Invoice.objects.filter(invoice_date__range=(fy_start, fy_end))
-    fy_revenue = sum(inv.total for inv in fy_invoices)
+    def get_queryset(self):
+        qs = Customer.objects.all().order_by('name')
+        q = self.request.query_params.get('q', '').strip()
+        if q:
+            qs = qs.filter(
+                Q(name__icontains=q) |
+                Q(mobile__icontains=q) |
+                Q(email__icontains=q)
+            )
+        return qs
 
-    recent_invoices = Invoice.objects.select_related('customer').order_by('-invoice_date', '-created_at')[:10]
 
-    # Monthly revenue for current FY (12 months)
-    monthly_data = []
-    for i in range(12):
-        month_date = fy_start + datetime.timedelta(days=i * 30)
-        month_start = datetime.date(month_date.year, month_date.month, 1)
-        if month_date.month == 12:
-            month_end = datetime.date(month_date.year + 1, 1, 1) - datetime.timedelta(days=1)
+# ─── Invoice ViewSet ──────────────────────────────────────────────────────────
+
+class InvoiceViewSet(viewsets.ModelViewSet):
+    """
+    CRUD for invoices with nested line items.
+    - list    → InvoiceListSerializer   (lightweight)
+    - retrieve → InvoiceDetailSerializer (full with line_items)
+    - create / update → InvoiceWriteSerializer (writable nested items)
+    Supports ?q= search on list.
+    Extra actions:
+      GET /api/invoices/next-number/ → {'next_number': '42/26-27'}
+      GET /api/invoices/dashboard/   → dashboard stats
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        qs = Invoice.objects.select_related('customer').prefetch_related('line_items').order_by(
+            '-invoice_date', '-created_at'
+        )
+        q = self.request.query_params.get('q', '').strip()
+        if q:
+            qs = qs.filter(
+                Q(invoice_number__icontains=q) |
+                Q(customer__name__icontains=q) |
+                Q(car_number__icontains=q) |
+                Q(car_model__icontains=q)
+            )
+        return qs
+
+    def get_serializer_class(self):
+        if self.action == 'list':
+            return InvoiceListSerializer
+        if self.action in ('create', 'update', 'partial_update'):
+            return InvoiceWriteSerializer
+        return InvoiceDetailSerializer
+
+    # ── Extra: next invoice number ────────────────────────────────────────
+
+    @action(detail=False, methods=['get'], url_path='next-number')
+    def next_number(self, request):
+        return Response({'next_number': Invoice.get_next_invoice_number()})
+
+    # ── Extra: dashboard data ─────────────────────────────────────────────
+
+    @action(detail=False, methods=['get'])
+    def dashboard(self, request):
+        today = timezone.now().date()
+        if today.month >= 4:
+            fy_start = datetime.date(today.year, 4, 1)
+            fy_end = datetime.date(today.year + 1, 3, 31)
         else:
-            month_end = datetime.date(month_date.year, month_date.month + 1, 1) - datetime.timedelta(days=1)
-        inv_in_month = Invoice.objects.filter(invoice_date__range=(month_start, month_end))
-        rev = sum(inv.total for inv in inv_in_month)
-        monthly_data.append({
-            'month': month_start.strftime('%b %y'),
-            'revenue': float(rev),
+            fy_start = datetime.date(today.year - 1, 4, 1)
+            fy_end = datetime.date(today.year, 3, 31)
+
+        fy_invoices = Invoice.objects.filter(
+            invoice_date__range=(fy_start, fy_end)
+        ).prefetch_related('line_items')
+        fy_revenue = float(sum(inv.total for inv in fy_invoices))
+
+        # Monthly revenue for this FY (12 months)
+        monthly_data = []
+        for i in range(12):
+            month_date = fy_start + datetime.timedelta(days=i * 30)
+            month_start = datetime.date(month_date.year, month_date.month, 1)
+            if month_date.month == 12:
+                month_end = datetime.date(month_date.year + 1, 1, 1) - datetime.timedelta(days=1)
+            else:
+                month_end = datetime.date(month_date.year, month_date.month + 1, 1) - datetime.timedelta(days=1)
+            inv_in_month = Invoice.objects.filter(
+                invoice_date__range=(month_start, month_end)
+            ).prefetch_related('line_items')
+            monthly_data.append({
+                'month': month_start.strftime('%b %y'),
+                'revenue': float(sum(inv.total for inv in inv_in_month)),
+            })
+
+        recent = Invoice.objects.select_related('customer').prefetch_related('line_items').order_by(
+            '-invoice_date', '-created_at'
+        )[:10]
+
+        return Response({
+            'fy_revenue': fy_revenue,
+            'fy_label': f"{fy_start.year}-{str(fy_end.year)[-2:]}",
+            'total_invoices': Invoice.objects.count(),
+            'total_customers': Customer.objects.count(),
+            'monthly_data': monthly_data,
+            'recent_invoices': InvoiceListSerializer(recent, many=True).data,
         })
 
-    context = {
-        'recent_invoices': recent_invoices,
-        'total_invoices': Invoice.objects.count(),
-        'total_customers': Customer.objects.count(),
-        'fy_revenue': fy_revenue,
-        'fy_label': f"{fy_start.year}-{str(fy_end.year)[-2:]}",
-        'monthly_data': monthly_data,
-    }
-    return render(request, 'billing/dashboard.html', context)
 
-
-# ─── Invoice List ────────────────────────────────────────────────────────────
+# ─── SPA shell ───────────────────────────────────────────────────────────────
 
 @login_required
-def invoice_list(request):
-    q = request.GET.get('q', '').strip()
-    invoices = Invoice.objects.select_related('customer').order_by('-invoice_date', '-created_at')
-    if q:
-        invoices = invoices.filter(
-            Q(invoice_number__icontains=q) |
-            Q(customer__name__icontains=q) |
-            Q(car_number__icontains=q) |
-            Q(car_model__icontains=q)
-        )
-    return render(request, 'billing/invoice_list.html', {'invoices': invoices, 'query': q})
-
-
-# ─── Invoice Create ──────────────────────────────────────────────────────────
-
-@login_required
-def invoice_create(request):
-    if request.method == 'POST':
-        form = InvoiceForm(request.POST)
-        if form.is_valid():
-            # Save invoice first so we have a pk to bind the inline formset
-            invoice = form.save()
-            formset = LineItemFormSet(request.POST, instance=invoice)
-            if formset.is_valid():
-                sr = 1
-                for f in formset.forms:
-                    if f.cleaned_data.get('DELETE'):
-                        continue
-                    if not f.cleaned_data.get('product_name', '').strip():
-                        continue
-                    item = f.instance
-                    item.invoice = invoice
-                    item.sr_no = sr
-                    item.save()
-                    sr += 1
-                messages.success(request, f'Invoice {invoice.invoice_number} created successfully!')
-                return redirect('invoice_detail', pk=invoice.pk)
-            else:
-                # Formset invalid — delete the invoice we just saved and re-render
-                invoice.delete()
-                form = InvoiceForm(request.POST)  # re-bind for display
-        else:
-            formset = LineItemFormSet(request.POST)
-    else:
-        initial_number = Invoice.get_next_invoice_number()
-        form = InvoiceForm(initial={'invoice_number': initial_number, 'invoice_date': timezone.now().date()})
-        formset = LineItemFormSet()
-    return render(request, 'billing/invoice_form.html', {
-        'form': form,
-        'formset': formset,
-        'title': 'New Invoice',
-        'action': 'Create',
-    })
-
-
-
-# ─── Invoice Detail ──────────────────────────────────────────────────────────
-
-@login_required
-def invoice_detail(request, pk):
-    invoice = get_object_or_404(Invoice.objects.select_related('customer').prefetch_related('line_items'), pk=pk)
-    return render(request, 'billing/invoice_detail.html', {
-        'invoice': invoice,
+def app_shell(request):
+    """Serves the single-page app. All billing UI routing is done client-side."""
+    return render(request, 'billing/app.html', {
         'settings': settings,
+        'user': request.user,
     })
 
 
-# ─── Invoice Edit ────────────────────────────────────────────────────────────
-
-@login_required
-def invoice_edit(request, pk):
-    invoice = get_object_or_404(Invoice, pk=pk)
-    if request.method == 'POST':
-        form = InvoiceForm(request.POST, instance=invoice)
-        formset = LineItemFormSet(request.POST, instance=invoice)
-        if form.is_valid() and formset.is_valid():
-            invoice = form.save()
-
-            # Step 1: delete any items the user marked for removal
-            for f in formset.forms:
-                if f.cleaned_data.get('DELETE') and f.instance.pk:
-                    f.instance.delete()
-
-            # Step 2: save every surviving item, numbering as we go.
-            # We set sr_no BEFORE .save() so the NOT NULL constraint is never violated.
-            sr = 1
-            for f in formset.forms:
-                if f.cleaned_data.get('DELETE'):
-                    continue
-                if not f.cleaned_data.get('product_name', '').strip():
-                    continue
-                item = f.instance
-                item.invoice = invoice
-                item.sr_no = sr
-                item.save()
-                sr += 1
-
-            messages.success(request, f'Invoice {invoice.invoice_number} updated!')
-            return redirect('invoice_detail', pk=invoice.pk)
-    else:
-        form = InvoiceForm(instance=invoice)
-        formset = LineItemFormSet(instance=invoice)
-    return render(request, 'billing/invoice_form.html', {
-        'form': form,
-        'formset': formset,
-        'invoice': invoice,
-        'title': f'Edit Invoice {invoice.invoice_number}',
-        'action': 'Update',
-    })
-
-
-
-
-# ─── Invoice Delete ──────────────────────────────────────────────────────────
-
-@login_required
-def invoice_delete(request, pk):
-    invoice = get_object_or_404(Invoice, pk=pk)
-    if request.method == 'POST':
-        num = invoice.invoice_number
-        invoice.delete()
-        messages.success(request, f'Invoice {num} deleted.')
-        return redirect('invoice_list')
-    return render(request, 'billing/invoice_confirm_delete.html', {'invoice': invoice})
-
-
-# ─── Invoice Print ──────────────────────────────────────────────────────────
+# ─── Invoice print (server-rendered for print/PDF quality) ───────────────────
 
 @login_required
 def invoice_print(request, pk):
-    invoice = get_object_or_404(Invoice.objects.select_related('customer').prefetch_related('line_items'), pk=pk)
+    invoice = get_object_or_404(
+        Invoice.objects.select_related('customer').prefetch_related('line_items'),
+        pk=pk,
+    )
     return render(request, 'billing/invoice_print.html', {
         'invoice': invoice,
         'settings': settings,
     })
-
-
-# ─── Customer List ───────────────────────────────────────────────────────────
-
-@login_required
-def customer_list(request):
-    q = request.GET.get('q', '').strip()
-    customers = Customer.objects.all().order_by('name')
-    if q:
-        customers = customers.filter(
-            Q(name__icontains=q) | Q(mobile__icontains=q) | Q(email__icontains=q)
-        )
-    return render(request, 'billing/customer_list.html', {'customers': customers, 'query': q})
-
-
-# ─── Customer Create ─────────────────────────────────────────────────────────
-
-@login_required
-def customer_create(request):
-    if request.method == 'POST':
-        form = CustomerForm(request.POST)
-        if form.is_valid():
-            c = form.save()
-            messages.success(request, f'Customer "{c.name}" added.')
-            return redirect('customer_list')
-    else:
-        form = CustomerForm()
-    return render(request, 'billing/customer_form.html', {'form': form, 'title': 'New Customer', 'action': 'Add'})
-
-
-# ─── Customer Edit ───────────────────────────────────────────────────────────
-
-@login_required
-def customer_edit(request, pk):
-    customer = get_object_or_404(Customer, pk=pk)
-    if request.method == 'POST':
-        form = CustomerForm(request.POST, instance=customer)
-        if form.is_valid():
-            form.save()
-            messages.success(request, f'Customer "{customer.name}" updated.')
-            return redirect('customer_list')
-    else:
-        form = CustomerForm(instance=customer)
-    return render(request, 'billing/customer_form.html', {
-        'form': form,
-        'customer': customer,
-        'title': f'Edit {customer.name}',
-        'action': 'Update',
-    })
-
-
-# ─── Customer Delete ──────────────────────────────────────────────────────────
-
-@login_required
-def customer_delete(request, pk):
-    customer = get_object_or_404(Customer, pk=pk)
-    if request.method == 'POST':
-        name = customer.name
-        customer.delete()
-        messages.success(request, f'Customer "{name}" deleted.')
-        return redirect('customer_list')
-    return render(request, 'billing/customer_confirm_delete.html', {'customer': customer})

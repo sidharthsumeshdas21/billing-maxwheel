@@ -283,20 +283,22 @@ window.go = go;
 
 /* ── Router ────────────────────────────────────────────────────────────── */
 const ROUTES = [
-  [/^\/?$|^\/dashboard$/, () => pgDashboard()],
-  [/^\/invoices$/, () => pgInvoiceList()],
-  [/^\/invoices\/new$/, () => pgInvoiceForm(null)],
-  [/^\/invoices\/(\d+)\/edit$/, m => pgInvoiceForm(m[1])],
-  [/^\/invoices\/(\d+)$/, m => pgInvoiceDetail(m[1])],
-  [/^\/customers$/, () => pgCustomerList()],
-  [/^\/customers\/new$/, () => pgCustomerForm(null)],
-  [/^\/customers\/(\d+)\/edit$/, m => pgCustomerForm(m[1])],
+  [/^\/?$|^\/dashboard\/?$/, () => pgDashboard()],
+  [/^\/invoices\/?$/, () => pgInvoiceList()],
+  [/^\/invoices\/new\/?$/, () => pgInvoiceForm(null)],
+  [/^\/invoices\/(\d+)\/edit\/?$/, m => pgInvoiceForm(m[1])],
+  [/^\/invoices\/(\d+)\/?$/, m => pgInvoiceDetail(m[1])],
+  [/^\/customers\/?$/, () => pgCustomerList()],
+  [/^\/customers\/new\/?$/, () => pgCustomerForm(null)],
+  [/^\/customers\/(\d+)\/edit\/?$/, m => pgCustomerForm(m[1])],
 ];
 
 let _chartInst = null;
 
 async function route() {
-  const path = location.hash.replace(/^#/, '') || '/';
+  // Normalize: strip hash prefix and trailing slashes
+  let path = location.hash.replace(/^#/, '') || '/';
+  if (path !== '/' && path.endsWith('/')) path = path.slice(0, -1);
 
   // Destroy previous chart instance to prevent canvas reuse error
   if (_chartInst) { _chartInst.destroy(); _chartInst = null; }
@@ -317,7 +319,11 @@ async function route() {
       try { await fn(m); }
       catch (e) {
         console.error(e);
-        const msg = e && (e.detail || Object.values(e).flat().join(' ')) || 'Something went wrong.';
+        let msg = 'Something went wrong.';
+        if (e && e.detail) msg = e.detail;
+        else if (e && typeof e === 'object') {
+          try { msg = Object.values(e).flat().join(' '); } catch(_) {}
+        }
         el.innerHTML = `<div class="empty-state"><h2>Error</h2><p>${msg}</p></div>`;
         toast(msg, 'error');
       }

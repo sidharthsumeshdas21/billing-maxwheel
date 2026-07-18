@@ -107,10 +107,10 @@ REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.IsAuthenticated',
     ],
+    # Only expose browsable API UI in local dev (DEBUG=True)
     'DEFAULT_RENDERER_CLASSES': [
         'rest_framework.renderers.JSONRenderer',
-        'rest_framework.renderers.BrowsableAPIRenderer',
-    ],
+    ] + (['rest_framework.renderers.BrowsableAPIRenderer'] if DEBUG else []),
 }
 
 # Company details (used in templates & PDF)
@@ -123,3 +123,11 @@ BANK_NAME = "Bank of Baroda"
 BANK_BRANCH = "Mithakhali"
 BANK_ACCOUNT = "78010200004500"
 BANK_IFSC = "BARB0VJNAVP"
+
+# Security headers
+SESSION_COOKIE_HTTPONLY = True        # JS can't read session cookie
+SESSION_COOKIE_SAMESITE = 'Lax'      # CSRF protection for session
+CSRF_COOKIE_HTTPONLY = False          # JS needs to read CSRF token (required for SPA)
+CSRF_COOKIE_SAMESITE = 'Lax'
+SECURE_BROWSER_XSS_FILTER = True
+X_FRAME_OPTIONS = 'DENY'

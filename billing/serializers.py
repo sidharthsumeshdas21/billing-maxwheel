@@ -102,10 +102,11 @@ class InvoiceWriteSerializer(serializers.ModelSerializer):
     class Meta:
         model = Invoice
         fields = [
-            'invoice_number', 'invoice_date', 'customer',
+            'id', 'invoice_number', 'invoice_date', 'customer',
             'car_model', 'car_number', 'discount', 'notes',
             'line_items',
         ]
+        read_only_fields = ['id']
 
     def validate_line_items(self, value):
         valid = [i for i in value if i.get('product_name', '').strip()]

@@ -299,7 +299,7 @@
 
 <!-- Controls (hidden on print) -->
 <div class="print-controls">
-  <a class="ctrl-btn ctrl-btn-back" href="{% url 'invoice_detail' invoice.pk %}">&#8592; Back</a>
+  <a class="ctrl-btn ctrl-btn-back" href="/#/invoices/{{ invoice.pk }}">&#8592; Back</a>
   <button class="ctrl-btn ctrl-btn-primary" onclick="window.print()">Print / Save PDF</button>
 </div>
 

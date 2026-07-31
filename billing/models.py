@@ -101,3 +101,90 @@ class LineItem(models.Model):
 
     def __str__(self):
         return f"{self.sr_no}. {self.product_name}"
+
+
+class Estimate(models.Model):
+    estimate_number = models.CharField(max_length=50, unique=True)
+    estimate_date = models.DateField(default=timezone.now)
+    customer = models.ForeignKey(Customer, on_delete=models.PROTECT, related_name='estimates')
+    car_model = models.CharField(max_length=100, blank=True, default='')
+    car_number = models.CharField(max_length=50, blank=True, default='')
+    discount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    notes = models.TextField(blank=True, default='')
+    validity_days = models.PositiveIntegerField(default=15)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-estimate_date', '-created_at']
+
+    def __str__(self):
+        return f"Estimate {self.estimate_number} — {self.customer.name}"
+
+    @property
+    def subtotal(self):
+        return sum(item.amount for item in self.line_items.all())
+
+    @property
+    def total(self):
+        return self.subtotal - self.discount
+
+    @property
+    def total_quantity(self):
+        return sum(item.quantity for item in self.line_items.all())
+
+    @classmethod
+    def get_next_estimate_number(cls):
+        """Auto-generate estimate number like EST-1/26-27 based on Indian financial year."""
+        today = timezone.now().date()
+        if today.month >= 4:
+            fy_start = today.year
+        else:
+            fy_start = today.year - 1
+        fy_end = fy_start + 1
+        fy_suffix = f"{str(fy_start)[-2:]}-{str(fy_end)[-2:]}"
+
+        prefix = f"/{fy_suffix}"
+        last = cls.objects.filter(estimate_number__endswith=prefix).order_by('-estimate_number').first()
+
+        if last:
+            try:
+                # estimate_number format: EST-N/YY-YY
+                num_part = last.estimate_number.split('EST-')[1].split('/')[0]
+                next_num = int(num_part) + 1
+            except (ValueError, IndexError):
+                next_num = 1
+        else:
+            next_num = 1
+
+        return f"EST-{next_num}/{fy_suffix}"
+
+
+class EstimateLineItem(models.Model):
+    UNIT_CHOICES = [
+        ('PCS', 'PCS'),
+        ('NOS', 'NOS'),
+        ('LTR', 'LTR'),
+        ('KG', 'KG'),
+        ('MTR', 'MTR'),
+        ('SET', 'SET'),
+        ('-', '-'),
+    ]
+
+    estimate = models.ForeignKey(Estimate, on_delete=models.CASCADE, related_name='line_items')
+    sr_no = models.PositiveIntegerField()
+    product_name = models.CharField(max_length=200)
+    quantity = models.DecimalField(max_digits=10, decimal_places=2)
+    unit = models.CharField(max_length=10, choices=UNIT_CHOICES, default='PCS')
+    rate = models.DecimalField(max_digits=10, decimal_places=2)
+    amount = models.DecimalField(max_digits=12, decimal_places=2)
+
+    class Meta:
+        ordering = ['sr_no']
+
+    def save(self, *args, **kwargs):
+        self.amount = self.quantity * self.rate
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.sr_no}. {self.product_name}"

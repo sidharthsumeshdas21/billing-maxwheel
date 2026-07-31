@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Invoice {{ invoice.invoice_number }} — MaxWheel Auto Services</title>
+  <title>Estimate — MaxWheel Auto Services</title>
   {% load static %}
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Rajdhani:wght@700&display=swap');
@@ -128,17 +128,17 @@
       color: #1a1d24;
     }
 
-    .inv-title-block .inv-num {
-      font-size: 13px;
-      font-weight: 700;
-      color: #e8610a;
-      margin-top: 5px;
-    }
-
     .inv-title-block .inv-date {
       font-size: 9.5px;
       color: #666;
+      margin-top: 5px;
+    }
+
+    .inv-title-block .validity {
+      font-size: 9px;
+      color: #e8610a;
       margin-top: 3px;
+      font-weight: 600;
     }
 
     /* ── Bill To / Vehicle ── */
@@ -255,6 +255,18 @@
       margin-bottom: 3px;
     }
 
+    /* ── Disclaimer ── */
+    .disclaimer-box {
+      margin-bottom: 14px;
+      padding: 8px 12px;
+      background: #f8f9fb;
+      border: 1px solid #e5e7eb;
+      border-radius: 6px;
+      font-size: 8.5px;
+      color: #888;
+      font-style: italic;
+    }
+
     /* ── Footer ── */
     .inv-footer {
       margin-top: auto;
@@ -299,7 +311,7 @@
 
 <!-- Controls (hidden on print) -->
 <div class="print-controls">
-  <a class="ctrl-btn ctrl-btn-back" href="/#/invoices/{{ invoice.pk }}">&#8592; Back</a>
+  <a class="ctrl-btn ctrl-btn-back" href="/#/estimates/{{ estimate.pk }}">&#8592; Back</a>
   <button class="ctrl-btn ctrl-btn-primary" onclick="window.print()">Print / Save PDF</button>
 </div>
 
@@ -309,7 +321,7 @@
   <!-- Watermark -->
   <img src="{% static 'img/logo.png' %}" alt="" class="page-watermark" aria-hidden="true">
 
-  <!-- Header -->
+  <!-- Header — No estimate number shown (internal only) -->
   <div class="inv-header">
     <div class="co-block">
       <div class="co-text">
@@ -323,27 +335,27 @@
       </div>
     </div>
     <div class="inv-title-block">
-      <div class="title-word">Invoice</div>
-      <div class="inv-num">No. {{ invoice.invoice_number }}</div>
-      <div class="inv-date">Date: {{ invoice.invoice_date|date:"d M Y" }}</div>
+      <div class="title-word">Estimate</div>
+      <div class="inv-date">Date: {{ estimate.estimate_date|date:"d M Y" }}</div>
+      <div class="validity">Valid for {{ estimate.validity_days }} days</div>
     </div>
   </div>
 
   <!-- Bill To + Vehicle -->
   <div class="info-row">
     <div class="info-box">
-      <div class="lbl">Bill To</div>
-      <div class="val">{{ invoice.customer.name }}</div>
-      {% if invoice.customer.address %}<div class="val-sub">{{ invoice.customer.address }}</div>{% endif %}
-      {% if invoice.customer.mobile %}<div class="val-sub">Mob: {{ invoice.customer.mobile }}</div>{% endif %}
-      {% if invoice.customer.email %}<div class="val-sub">{{ invoice.customer.email }}</div>{% endif %}
+      <div class="lbl">Prepared For</div>
+      <div class="val">{{ estimate.customer.name }}</div>
+      {% if estimate.customer.address %}<div class="val-sub">{{ estimate.customer.address }}</div>{% endif %}
+      {% if estimate.customer.mobile %}<div class="val-sub">Mob: {{ estimate.customer.mobile }}</div>{% endif %}
+      {% if estimate.customer.email %}<div class="val-sub">{{ estimate.customer.email }}</div>{% endif %}
     </div>
 
-    {% if invoice.car_number or invoice.car_model %}
+    {% if estimate.car_number or estimate.car_model %}
     <div class="info-box" style="max-width:200px">
       <div class="lbl">Vehicle Details</div>
-      {% if invoice.car_number %}<div class="val">{{ invoice.car_number }}</div>{% endif %}
-      {% if invoice.car_model %}<div class="val-sub">{{ invoice.car_model }}</div>{% endif %}
+      {% if estimate.car_number %}<div class="val">{{ estimate.car_number }}</div>{% endif %}
+      {% if estimate.car_model %}<div class="val-sub">{{ estimate.car_model }}</div>{% endif %}
     </div>
     {% endif %}
   </div>
@@ -361,7 +373,7 @@
       </tr>
     </thead>
     <tbody>
-      {% for item in invoice.line_items.all %}
+      {% for item in estimate.line_items.all %}
       <tr>
         <td class="dim">{{ item.sr_no }}</td>
         <td class="bold">{{ item.product_name }}</td>
@@ -373,7 +385,7 @@
       {% endfor %}
       <!-- Padding rows to fill space -->
       {% for i in "12345" %}
-        {% if forloop.counter > invoice.line_items.count %}
+        {% if forloop.counter > estimate.line_items.count %}
         <tr><td>&nbsp;</td><td></td><td></td><td></td><td></td><td></td></tr>
         {% endif %}
       {% endfor %}
@@ -383,23 +395,29 @@
   <!-- Totals -->
   <div class="totals-section">
     <div class="totals-box">
-      <div class="t-row"><span>Subtotal</span><span>&#8377; {{ invoice.subtotal|floatformat:2 }}</span></div>
-      {% if invoice.discount %}
-      <div class="t-row"><span>Discount</span><span>- &#8377; {{ invoice.discount|floatformat:2 }}</span></div>
+      <div class="t-row"><span>Subtotal</span><span>&#8377; {{ estimate.subtotal|floatformat:2 }}</span></div>
+      {% if estimate.discount %}
+      <div class="t-row"><span>Discount</span><span>- &#8377; {{ estimate.discount|floatformat:2 }}</span></div>
       {% endif %}
-      <div class="t-row grand"><span>TOTAL</span><span>&#8377; {{ invoice.total|floatformat:2 }}</span></div>
+      <div class="t-row grand"><span>ESTIMATED TOTAL</span><span>&#8377; {{ estimate.total|floatformat:2 }}</span></div>
     </div>
   </div>
 
   <!-- Notes -->
-  {% if invoice.notes %}
+  {% if estimate.notes %}
   <div class="notes-box">
     <div class="lbl">Notes</div>
-    <div>{{ invoice.notes }}</div>
+    <div>{{ estimate.notes }}</div>
   </div>
   {% endif %}
 
-  <!-- Footer: Bank + Signature -->
+  <!-- Disclaimer -->
+  <div class="disclaimer-box">
+    This is an estimate only. Actual costs may vary based on final inspection and additional work required.
+    This estimate is valid for {{ estimate.validity_days }} days from the date of issue.
+  </div>
+
+  <!-- Footer: Signature -->
   <div class="inv-footer">
     <div class="bank-block">
       <div class="lbl">Bank Details — NEFT / RTGS</div>

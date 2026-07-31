@@ -154,6 +154,22 @@
       New Invoice
     </a>
 
+    <div class="nav-section">Estimates</div>
+
+    <a class="nav-link" data-route="/estimates" href="#/estimates">
+      <span class="nav-ico">
+        <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+      </span>
+      All Estimates
+    </a>
+
+    <a class="nav-link" data-route="/estimates/new" href="#/estimates/new">
+      <span class="nav-ico">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+      </span>
+      New Estimate
+    </a>
+
     <div class="nav-section">Customers</div>
 
     <a class="nav-link" data-route="/customers" href="#/customers">
@@ -288,6 +304,10 @@ const ROUTES = [
   [/^\/invoices\/new\/?$/, () => pgInvoiceForm(null)],
   [/^\/invoices\/(\d+)\/edit\/?$/, m => pgInvoiceForm(m[1])],
   [/^\/invoices\/(\d+)\/?$/, m => pgInvoiceDetail(m[1])],
+  [/^\/estimates\/?$/, () => pgEstimateList()],
+  [/^\/estimates\/new\/?$/, () => pgEstimateForm(null)],
+  [/^\/estimates\/(\d+)\/edit\/?$/, m => pgEstimateForm(m[1])],
+  [/^\/estimates\/(\d+)\/?$/, m => pgEstimateDetail(m[1])],
   [/^\/customers\/?$/, () => pgCustomerList()],
   [/^\/customers\/new\/?$/, () => pgCustomerForm(null)],
   [/^\/customers\/(\d+)\/edit\/?$/, m => pgCustomerForm(m[1])],
@@ -373,6 +393,10 @@ async function pgDashboard() {
       <div class="stat-card">
         <div class="stat-label">Total Invoices</div>
         <div class="stat-value">${d.total_invoices}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Estimates</div>
+        <div class="stat-value">${d.total_estimates}</div>
       </div>
       <div class="stat-card">
         <div class="stat-label">Customers</div>
@@ -1084,6 +1108,442 @@ window.deleteCustomer = async (id) => {
     go('/customers');
   } catch (e) {
     toast((e && e.detail) || 'Cannot delete — customer may have existing invoices.', 'error');
+  }
+};
+
+/* ══════════════════════════════════════════════════════════════════════════
+   ESTIMATE PAGES
+══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Estimate List ─────────────────────────────────────────────────────── */
+async function pgEstimateList(q) {
+  q = q === undefined ? (new URLSearchParams(location.search).get('q') || '') : q;
+  const url = q ? `/api/estimates/?q=${encodeURIComponent(q)}` : '/api/estimates/';
+  const ests = await api('GET', url);
+  const el = document.getElementById('content');
+
+  el.innerHTML = `
+    <div class="page-header">
+      <div><h1>Estimates</h1><div class="sub">${ests.length} estimate${ests.length !== 1 ? 's' : ''}</div></div>
+      <div class="page-header-actions">
+        <button class="btn btn-primary" onclick="go('/estimates/new')">
+          <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          New Estimate
+        </button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header" style="gap:12px">
+        <input id="est-search" class="form-input" placeholder="Search estimate #, customer, vehicle\u2026" value="${q}" style="max-width:340px">
+      </div>
+      <div class="card-body" style="padding:0">
+        ${ests.length === 0
+          ? '<div class="empty-state"><p>No estimates found.</p></div>'
+          : `<div class="table-wrap"><table class="data-table">
+              <thead><tr>
+                <th>Estimate #</th><th>Date</th><th>Customer</th>
+                <th>Vehicle</th><th class="text-right">Total</th><th></th>
+              </tr></thead>
+              <tbody>
+                ${ests.map(est => `
+                  <tr class="clickable" onclick="go('/estimates/${est.id}')">
+                    <td class="fw-600 text-orange">${est.estimate_number}</td>
+                    <td class="text-dim">${fmtDate(est.estimate_date)}</td>
+                    <td>${est.customer_name}</td>
+                    <td class="text-dim">${[est.car_number, est.car_model].filter(Boolean).join(' \u00b7') || '\u2014'}</td>
+                    <td class="text-right fw-600 text-mono">${fmt(est.total)}</td>
+                    <td>
+                      <button class="icon-btn" title="Edit"
+                        onclick="event.stopPropagation();go('/estimates/${est.id}/edit')">
+                        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                          <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                        </svg>
+                      </button>
+                    </td>
+                  </tr>`).join('')}
+              </tbody>
+            </table></div>`}
+      </div>
+    </div>`;
+
+  let _t;
+  document.getElementById('est-search')?.addEventListener('input', e => {
+    clearTimeout(_t);
+    _t = setTimeout(() => pgEstimateList(e.target.value.trim()), 280);
+  });
+}
+
+/* ── Estimate Form (create + edit) ─────────────────────────────────────── */
+async function pgEstimateForm(id) {
+  const isEdit = !!id;
+  const [customers, estimate, numData] = await Promise.all([
+    api('GET', '/api/customers/'),
+    isEdit ? api('GET', `/api/estimates/${id}/`) : Promise.resolve(null),
+    !isEdit ? api('GET', '/api/estimates/next-number/') : Promise.resolve(null),
+  ]);
+
+  const est = estimate || {};
+  const initItems = (est.line_items && est.line_items.length)
+    ? est.line_items
+    : [{ id: null, product_name: '', quantity: '1', unit: 'PCS', rate: '' }];
+
+  const el = document.getElementById('content');
+  el.innerHTML = `
+    <div class="page-header">
+      <div>
+        <h1>${isEdit ? 'Edit Estimate' : 'New Estimate'}</h1>
+        <div class="sub">${isEdit ? est.estimate_number : 'Fill in details and add line items'}</div>
+      </div>
+      <div class="page-header-actions">
+        <button class="btn btn-secondary" onclick="history.back()">
+          <svg viewBox="0 0 24 24"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+          Back
+        </button>
+      </div>
+    </div>
+
+    <form id="est-form" autocomplete="off" novalidate>
+
+      <!-- Estimate header details -->
+      <div class="card mb-4">
+        <div class="card-header"><span class="card-title">Estimate Details</span></div>
+        <div class="card-body">
+          <div class="form-grid">
+            <div class="form-group">
+              <label class="form-label">Estimate Number <span class="req">*</span></label>
+              <input name="estimate_number" class="form-input" required
+                value="${est.estimate_number || numData?.next_number || ''}"
+                placeholder="e.g. EST-1/26-27">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Estimate Date <span class="req">*</span></label>
+              <input name="estimate_date" type="date" class="form-input" required
+                value="${est.estimate_date || todayISO()}">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Customer <span class="req">*</span></label>
+              <select name="customer" class="form-input" required>
+                <option value="">&mdash; Select Customer &mdash;</option>
+                ${customers.map(c =>
+                  `<option value="${c.id}" ${est.customer == c.id ? 'selected' : ''}>${c.name}</option>`
+                ).join('')}
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Vehicle Number</label>
+              <input name="car_number" class="form-input" placeholder="GJ01 RS 1098"
+                value="${est.car_number || ''}">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Vehicle Model</label>
+              <input name="car_model" class="form-input" placeholder="XUV500"
+                value="${est.car_model || ''}">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Discount (&#8377;)</label>
+              <input name="discount" type="number" step="0.01" min="0" class="form-input"
+                placeholder="0.00" value="${est.discount || '0'}">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Validity (days)</label>
+              <input name="validity_days" type="number" min="1" class="form-input"
+                placeholder="15" value="${est.validity_days || '15'}">
+            </div>
+          </div>
+          <div class="form-group" style="margin-top:14px">
+            <label class="form-label">Notes</label>
+            <textarea name="notes" class="form-input" rows="2"
+              placeholder="Optional notes">${est.notes || ''}</textarea>
+          </div>
+        </div>
+      </div>
+
+      <!-- Line Items -->
+      <div class="card mb-4">
+        <div class="card-header">
+          <span class="card-title">Line Items</span>
+          <span class="text-dim" style="font-size:.77rem">At least one item required</span>
+        </div>
+        <div class="card-body" style="padding-bottom:14px">
+          <div class="table-wrap">
+            <table class="li-table">
+              <thead><tr>
+                <th style="width:32px">#</th>
+                <th>Description / Product</th>
+                <th style="width:88px">Qty</th>
+                <th style="width:76px">Unit</th>
+                <th style="width:108px">Rate (&#8377;)</th>
+                <th class="th-right" style="width:108px">Amount (&#8377;)</th>
+                <th style="width:32px"></th>
+              </tr></thead>
+              <tbody id="li-body">
+                ${initItems.map((it, i) => liRow(i, it)).join('')}
+              </tbody>
+            </table>
+          </div>
+          <button type="button" id="add-row" class="add-row-btn">
+            <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Add Line Item
+          </button>
+        </div>
+      </div>
+
+      <!-- Totals + Submit -->
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap">
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <button type="submit" id="submit-btn" class="btn btn-primary" style="min-width:180px;justify-content:center">
+            <svg viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+            ${isEdit ? 'Update Estimate' : 'Create Estimate'}
+          </button>
+          ${isEdit ? `
+            <button type="button" class="btn btn-danger btn-sm" style="justify-content:center"
+              onclick="deleteEstimate(${id})">
+              <svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/>
+                <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+                <path d="M10 11v6"/><path d="M14 11v6"/>
+                <path d="M9 6V4h6v2"/>
+              </svg>
+              Delete Estimate
+            </button>` : ''}
+        </div>
+        <div class="totals-panel">
+          <div class="totals-row">
+            <span class="tr-label">Subtotal</span>
+            <span id="t-sub" class="tr-val">&#8377;0.00</span>
+          </div>
+          <div class="totals-row">
+            <span class="tr-label">Discount</span>
+            <span id="t-disc" class="tr-val">&#8377;0.00</span>
+          </div>
+          <div class="totals-row grand">
+            <span class="tr-label">Total</span>
+            <span id="t-total" class="tr-val">&#8377;0.00</span>
+          </div>
+        </div>
+      </div>
+    </form>`;
+
+  recalc();
+
+  // Add row
+  document.getElementById('add-row').addEventListener('click', () => {
+    const tbody = document.getElementById('li-body');
+    const idx = tbody.querySelectorAll('.li-row').length;
+    tbody.insertAdjacentHTML('beforeend', liRow(idx, { id: null, product_name: '', quantity: '1', unit: 'PCS', rate: '' }));
+    renumber();
+    tbody.querySelector('.li-row:last-child .li-product')?.focus();
+  });
+
+  // Live recalc
+  document.getElementById('est-form').addEventListener('input', e => {
+    const n = e.target.name || '';
+    if (n === 'li_qty' || n === 'li_rate' || n === 'discount') recalc();
+  });
+
+  // Delete row
+  document.getElementById('li-body').addEventListener('click', e => {
+    const btn = e.target.closest('.li-del-btn');
+    if (!btn) return;
+    const rows = document.querySelectorAll('#li-body .li-row');
+    if (rows.length <= 1) { toast('At least one line item is required', 'error'); return; }
+    btn.closest('.li-row').remove();
+    renumber();
+    recalc();
+  });
+
+  // Submit
+  document.getElementById('est-form').addEventListener('submit', async e => {
+    e.preventDefault();
+    const btn = document.getElementById('submit-btn');
+    btn.disabled = true;
+    const orig = btn.innerHTML;
+    btn.innerHTML = '<span style="opacity:.6">Saving\u2026</span>';
+
+    try {
+      const payload = collectEstimateForm();
+      if (!payload.customer) { throw { customer: ['Please select a customer.'] }; }
+      if (!payload.line_items.length) { throw { line_items: ['At least one item required.'] }; }
+
+      if (isEdit) {
+        await api('PUT', `/api/estimates/${id}/`, payload);
+        toast('Estimate updated successfully!');
+        go(`/estimates/${id}`);
+      } else {
+        const created = await api('POST', '/api/estimates/', payload);
+        toast('Estimate created!');
+        go(`/estimates/${created.id}`);
+      }
+    } catch (err) {
+      btn.disabled = false;
+      btn.innerHTML = orig;
+      const msg = (err && (err.detail || Object.values(err).flat().join(' '))) || 'Save failed. Check all fields.';
+      toast(msg, 'error');
+    }
+  });
+}
+
+function collectEstimateForm() {
+  const f = document.getElementById('est-form');
+  const line_items = [];
+  document.querySelectorAll('#li-body .li-row').forEach(row => {
+    const name = row.querySelector('.li-prod')?.value.trim()
+               || row.querySelector('[name=li_prod]')?.value.trim() || '';
+    if (!name) return;
+    const rawId = row.querySelector('[name=li_id]')?.value;
+    line_items.push({
+      id:           rawId ? parseInt(rawId) : null,
+      product_name: name,
+      quantity:     row.querySelector('.li-qty')?.value || '1',
+      unit:         row.querySelector('.li-unit')?.value || 'PCS',
+      rate:         row.querySelector('.li-rate')?.value || '0',
+    });
+  });
+  return {
+    estimate_number: f.querySelector('[name=estimate_number]').value.trim(),
+    estimate_date:   f.querySelector('[name=estimate_date]').value,
+    customer:        parseInt(f.querySelector('[name=customer]').value) || null,
+    car_number:      f.querySelector('[name=car_number]').value.trim(),
+    car_model:       f.querySelector('[name=car_model]').value.trim(),
+    discount:        f.querySelector('[name=discount]').value || '0',
+    validity_days:   parseInt(f.querySelector('[name=validity_days]').value) || 15,
+    notes:           f.querySelector('[name=notes]').value.trim(),
+    line_items,
+  };
+}
+
+/* ── Estimate Detail ───────────────────────────────────────────────────── */
+async function pgEstimateDetail(id) {
+  const est = await api('GET', `/api/estimates/${id}/`);
+  const el = document.getElementById('content');
+
+  el.innerHTML = `
+    <div class="page-header">
+      <div>
+        <h1>Estimate <span class="text-orange">${est.estimate_number}</span></h1>
+        <div class="sub">${fmtDate(est.estimate_date)}</div>
+      </div>
+      <div class="page-header-actions">
+        <button class="btn btn-secondary" onclick="go('/estimates')">
+          <svg viewBox="0 0 24 24"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+          Back
+        </button>
+        <a href="/estimates/${id}/print/" target="_blank" class="btn btn-secondary">
+          <svg viewBox="0 0 24 24"><polyline points="6 9 6 2 18 2 18 9"/>
+            <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>
+            <rect x="6" y="14" width="12" height="8"/>
+          </svg>
+          Print / PDF
+        </a>
+        <button class="btn btn-primary" onclick="go('/estimates/${id}/edit')">
+          <svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+          </svg>
+          Edit
+        </button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-body">
+
+        <!-- Customer + Meta -->
+        <div style="display:grid;grid-template-columns:1fr auto;gap:24px;margin-bottom:20px">
+          <div>
+            <div class="detail-label">Prepared For</div>
+            <div style="font-size:1.1rem;font-weight:700;color:var(--t-100);margin-bottom:4px">${est.customer_name}</div>
+            ${est.customer_address ? `<div class="text-dim" style="font-size:.82rem">${est.customer_address}</div>` : ''}
+            ${est.customer_mobile  ? `<div class="text-dim" style="font-size:.82rem;margin-top:2px">${est.customer_mobile}</div>` : ''}
+            ${est.customer_email   ? `<div class="text-dim" style="font-size:.82rem">${est.customer_email}</div>` : ''}
+          </div>
+          <div style="text-align:right">
+            <div class="detail-label">Estimate No. (internal)</div>
+            <div style="font-size:1.25rem;font-weight:800;color:var(--orange);margin-bottom:10px">${est.estimate_number}</div>
+            <div class="detail-label">Date</div>
+            <div style="font-weight:600;color:var(--t-100)">${fmtDate(est.estimate_date)}</div>
+            <div class="detail-label" style="margin-top:8px">Valid For</div>
+            <div style="font-weight:600;color:var(--t-100)">${est.validity_days} days</div>
+          </div>
+        </div>
+
+        ${est.car_number || est.car_model ? `
+        <div style="display:flex;gap:24px;margin-bottom:20px;padding:12px 16px;
+                    background:var(--bg-750);border-radius:8px;border:1px solid var(--border)">
+          ${est.car_number ? `<div><div class="detail-label">Vehicle No.</div>
+            <div style="font-weight:600;color:var(--t-100)">${est.car_number}</div></div>` : ''}
+          ${est.car_model  ? `<div><div class="detail-label">Model</div>
+            <div style="font-weight:600;color:var(--t-100)">${est.car_model}</div></div>` : ''}
+        </div>` : ''}
+
+        <!-- Items table -->
+        <div class="table-wrap" style="margin-bottom:20px">
+          <table class="data-table">
+            <thead><tr>
+              <th style="width:36px">#</th>
+              <th>Description</th>
+              <th class="text-right">Qty</th>
+              <th>Unit</th>
+              <th class="text-right">Rate</th>
+              <th class="text-right">Amount</th>
+            </tr></thead>
+            <tbody>
+              ${est.line_items.map(it => `
+                <tr>
+                  <td class="text-dim">${it.sr_no}</td>
+                  <td class="fw-600">${it.product_name}</td>
+                  <td class="text-right text-mono">${it.quantity}</td>
+                  <td class="text-dim">${it.unit}</td>
+                  <td class="text-right text-mono">${Number(it.rate).toFixed(2)}</td>
+                  <td class="text-right fw-600 text-mono">${Number(it.amount).toFixed(2)}</td>
+                </tr>`).join('')}
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Totals -->
+        <div style="display:flex;justify-content:flex-end">
+          <div class="totals-panel">
+            <div class="totals-row">
+              <span class="tr-label">Subtotal</span>
+              <span class="tr-val">${fmt(est.subtotal)}</span>
+            </div>
+            ${Number(est.discount) > 0 ? `
+            <div class="totals-row">
+              <span class="tr-label">Discount</span>
+              <span class="tr-val">\u2212${fmt(est.discount)}</span>
+            </div>` : ''}
+            <div class="totals-row grand">
+              <span class="tr-label">Estimated Total</span>
+              <span class="tr-val">${fmt(est.total)}</span>
+            </div>
+          </div>
+        </div>
+
+        ${est.notes ? `<hr class="divider"><div class="detail-label">Notes</div>
+          <div style="font-size:.875rem;color:var(--t-400)">${est.notes}</div>` : ''}
+
+        <!-- Delete action at bottom -->
+        <div style="margin-top:28px;padding-top:20px;border-top:1px solid var(--border);display:flex;justify-content:flex-end">
+          <button class="btn btn-danger btn-sm" onclick="deleteEstimate(${id})">
+            <svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/>
+              <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+            </svg>
+            Delete Estimate
+          </button>
+        </div>
+      </div>
+    </div>`;
+}
+
+/* ── Delete estimate helper ────────────────────────────────────────────── */
+window.deleteEstimate = async (id) => {
+  if (!confirm('Delete this estimate? This cannot be undone.')) return;
+  try {
+    await api('DELETE', `/api/estimates/${id}/`);
+    toast('Estimate deleted.');
+    go('/estimates');
+  } catch (e) {
+    toast((e && e.detail) || 'Delete failed.', 'error');
   }
 };
 </script>

@@ -1,6 +1,6 @@
 from django import forms
 from django.forms import inlineformset_factory
-from .models import Customer, Invoice, LineItem
+from .models import Customer, Invoice, LineItem, Estimate, EstimateLineItem
 
 
 class CustomerForm(forms.ModelForm):
@@ -46,6 +46,47 @@ LineItemFormSet = inlineformset_factory(
     Invoice,
     LineItem,
     form=LineItemForm,
+    extra=5,
+    min_num=1,
+    validate_min=True,
+    can_delete=True,
+    can_delete_extra=True,
+    fields=['product_name', 'quantity', 'unit', 'rate'],
+)
+
+
+class EstimateForm(forms.ModelForm):
+    class Meta:
+        model = Estimate
+        fields = ['estimate_number', 'estimate_date', 'customer', 'car_model', 'car_number', 'discount', 'notes', 'validity_days']
+        widgets = {
+            'estimate_number': forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'e.g. EST-1/26-27'}),
+            'estimate_date': forms.DateInput(attrs={'class': 'form-input', 'type': 'date'}),
+            'customer': forms.Select(attrs={'class': 'form-input'}),
+            'car_model': forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'e.g. XUV500'}),
+            'car_number': forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'e.g. GJ01 RS 1098'}),
+            'discount': forms.NumberInput(attrs={'class': 'form-input', 'placeholder': '0.00', 'step': '0.01'}),
+            'notes': forms.Textarea(attrs={'class': 'form-input', 'rows': 2, 'placeholder': 'Optional notes'}),
+            'validity_days': forms.NumberInput(attrs={'class': 'form-input', 'placeholder': '15', 'min': '1'}),
+        }
+
+
+class EstimateLineItemForm(forms.ModelForm):
+    class Meta:
+        model = EstimateLineItem
+        fields = ['product_name', 'quantity', 'unit', 'rate']
+        widgets = {
+            'product_name': forms.TextInput(attrs={'class': 'form-input li-product', 'placeholder': 'Product / Service'}),
+            'quantity': forms.NumberInput(attrs={'class': 'form-input li-qty', 'placeholder': '1', 'step': '0.01', 'min': '0'}),
+            'unit': forms.Select(attrs={'class': 'form-input li-unit'}),
+            'rate': forms.NumberInput(attrs={'class': 'form-input li-rate', 'placeholder': '0.00', 'step': '0.01', 'min': '0'}),
+        }
+
+
+EstimateLineItemFormSet = inlineformset_factory(
+    Estimate,
+    EstimateLineItem,
+    form=EstimateLineItemForm,
     extra=5,
     min_num=1,
     validate_min=True,

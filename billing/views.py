@@ -9,12 +9,15 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 
-from .models import Customer, Invoice, LineItem
+from .models import Customer, Invoice, LineItem, Estimate, EstimateLineItem
 from .serializers import (
     CustomerSerializer,
     InvoiceListSerializer,
     InvoiceDetailSerializer,
     InvoiceWriteSerializer,
+    EstimateListSerializer,
+    EstimateDetailSerializer,
+    EstimateWriteSerializer,
 )
 import datetime
 
@@ -123,9 +126,52 @@ class InvoiceViewSet(viewsets.ModelViewSet):
             'fy_label': f"{fy_start.year}-{str(fy_end.year)[-2:]}",
             'total_invoices': Invoice.objects.count(),
             'total_customers': Customer.objects.count(),
+            'total_estimates': Estimate.objects.count(),
             'monthly_data': monthly_data,
             'recent_invoices': InvoiceListSerializer(recent, many=True).data,
         })
+
+
+# ─── Estimate ViewSet ─────────────────────────────────────────────────────────
+
+class EstimateViewSet(viewsets.ModelViewSet):
+    """
+    CRUD for estimates with nested line items.
+    - list    → EstimateListSerializer   (lightweight)
+    - retrieve → EstimateDetailSerializer (full with line_items)
+    - create / update → EstimateWriteSerializer (writable nested items)
+    Supports ?q= search on list.
+    Extra actions:
+      GET /api/estimates/next-number/ → {'next_number': 'EST-1/26-27'}
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        qs = Estimate.objects.select_related('customer').prefetch_related('line_items').order_by(
+            '-estimate_date', '-created_at'
+        )
+        q = self.request.query_params.get('q', '').strip()
+        if q:
+            qs = qs.filter(
+                Q(estimate_number__icontains=q) |
+                Q(customer__name__icontains=q) |
+                Q(car_number__icontains=q) |
+                Q(car_model__icontains=q)
+            )
+        return qs
+
+    def get_serializer_class(self):
+        if self.action == 'list':
+            return EstimateListSerializer
+        if self.action in ('create', 'update', 'partial_update'):
+            return EstimateWriteSerializer
+        return EstimateDetailSerializer
+
+    # ── Extra: next estimate number ───────────────────────────────────────
+
+    @action(detail=False, methods=['get'], url_path='next-number')
+    def next_number(self, request):
+        return Response({'next_number': Estimate.get_next_estimate_number()})
 
 
 # ─── SPA shell ───────────────────────────────────────────────────────────────
@@ -149,5 +195,19 @@ def invoice_print(request, pk):
     )
     return render(request, 'billing/invoice_print.html', {
         'invoice': invoice,
+        'settings': settings,
+    })
+
+
+# ─── Estimate print (server-rendered for print/PDF quality) ──────────────────
+
+@login_required
+def estimate_print(request, pk):
+    estimate = get_object_or_404(
+        Estimate.objects.select_related('customer').prefetch_related('line_items'),
+        pk=pk,
+    )
+    return render(request, 'billing/estimate_print.html', {
+        'estimate': estimate,
         'settings': settings,
     })

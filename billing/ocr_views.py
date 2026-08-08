@@ -666,7 +666,25 @@ def chatbot_query(request):
     if not message:
         return Response({'error': 'message is required'}, status=status.HTTP_400_BAD_REQUEST)
 
-    # Step 1: Ask Gemini to generate SQL
+    # Fast-path for greetings & general app introduction
+    msg_lower = message.lower().strip()
+    greetings = {'hi', 'hello', 'hey', 'hi there', 'hey there', 'greetings', 'hola', 'good morning', 'good evening', 'good afternoon'}
+    app_info_keywords = ['what is this app', 'what can you do', 'who are you', 'what does this app do', 'help', 'how to use', 'about app']
+
+    if msg_lower in greetings or any(k in msg_lower for k in app_info_keywords):
+        conv_answer = (
+            "Hello! 👋 I am your MaxWheel AI Business Assistant.\n\n"
+            "I can help you track your workshop's sales, analyze customer billing history, view daily work logs, or auto-fill invoices from uploaded handwritten photos.\n\n"
+            "Try asking me questions like:\n"
+            "• 'What is our revenue this month?'\n"
+            "• 'Who are our top 5 customers?'\n"
+            "• 'Show total invoices generated this week'"
+        )
+        return Response({
+            'answer': conv_answer,
+            'sql_used': '',
+            'row_count': 0,
+        })
     sql_prompt = f"""
 You are a SQL expert for an Indian automotive workshop billing system.
 Given the schema and a user question, write one safe READ-ONLY SQL SELECT query.

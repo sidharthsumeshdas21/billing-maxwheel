@@ -76,4 +76,17 @@
     </form>
   </div>
 </div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const dateEl = document.getElementById('{{ form.date.id_for_label }}');
+    if (dateEl && !dateEl.value) {
+      const d = new Date();
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      dateEl.value = `${y}-${m}-${day}`;
+    }
+  });
+</script>
 {% endblock %}

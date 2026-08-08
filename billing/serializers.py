@@ -1,6 +1,17 @@
 from rest_framework import serializers
-from django.db.models import Q
-from .models import Customer, Invoice, LineItem
+from django.db.models import Q, Sum, Count
+from .models import Customer, Invoice, LineItem, CustomerNote
+
+
+# ─── Customer Note ────────────────────────────────────────────────────────────
+
+class CustomerNoteSerializer(serializers.ModelSerializer):
+    """Serializer for free-text customer notes."""
+    class Meta:
+        model = CustomerNote
+        fields = ['id', 'text', 'created_at', 'updated_at']
+        read_only_fields = ['created_at', 'updated_at']
+
 
 
 # ─── Customer ────────────────────────────────────────────────────────────────

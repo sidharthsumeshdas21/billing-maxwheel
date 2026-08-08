@@ -1058,3 +1058,369 @@ textarea.form-input { resize: vertical; min-height: 72px; line-height: 1.5; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--bg-600); border-radius: 10px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--t-600); }
+
+
+/* ══════════════════════════════════════════════════════════════════════════
+   MOBILE RESPONSIVE  — added for handwritten OCR + mobile-first UX
+   Breakpoints:
+     ≤ 768px  → phone / small tablet  (sidebar becomes overlay drawer)
+     ≤ 480px  → small phone           (single-column everything)
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Hamburger toggle button (hidden on desktop) ─────────────────── */
+.hamburger {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border: 1px solid var(--border-md);
+  border-radius: var(--r-sm);
+  background: var(--bg-800);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.hamburger svg {
+  width: 18px; height: 18px;
+  stroke: var(--t-200); fill: none;
+  stroke-width: 2; stroke-linecap: round;
+  transition: opacity 0.2s;
+}
+
+/* ── Sidebar overlay backdrop (mobile) ───────────────────────────── */
+.sidebar-backdrop {
+  display: none;
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.65);
+  z-index: 190;
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+}
+.sidebar-backdrop.visible { display: block; }
+
+/* ── Bottom nav bar (mobile only) ───────────────────────────────── */
+.bottom-nav {
+  display: none;
+  position: fixed; bottom: 0; left: 0; right: 0;
+  height: 60px;
+  background: var(--bg-card);
+  border-top: 1px solid var(--border);
+  z-index: 300;
+  padding: 0 8px;
+  padding-bottom: env(safe-area-inset-bottom, 0); /* iPhone notch */
+  align-items: center;
+  justify-content: space-around;
+}
+.bn-item {
+  display: flex; flex-direction: column; align-items: center;
+  gap: 3px; padding: 6px 10px;
+  border-radius: var(--r-sm);
+  color: var(--t-600);
+  font-size: 0.6rem; font-weight: 600;
+  letter-spacing: 0.04em; text-transform: uppercase;
+  cursor: pointer; border: none; background: none;
+  transition: color 0.15s, background 0.15s;
+  flex: 1; min-width: 0;
+  text-decoration: none;
+}
+.bn-item svg {
+  width: 20px; height: 20px;
+  stroke: currentColor; fill: none;
+  stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round;
+}
+.bn-item.active, .bn-item:hover { color: var(--orange); }
+.bn-item.bn-scan {
+  color: #fff;
+  background: var(--orange);
+  border-radius: var(--r-md);
+  padding: 6px 12px;
+}
+.bn-item.bn-scan:hover { background: var(--orange-lt); }
+
+/* ── OCR Scan Modal ──────────────────────────────────────────────── */
+.ocr-modal-overlay {
+  display: none;
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.75);
+  z-index: 9000;
+  align-items: flex-end;        /* sheet slides up from bottom on mobile */
+  justify-content: center;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+.ocr-modal-overlay.open { display: flex; }
+
+.ocr-modal {
+  background: var(--bg-card);
+  border: 1px solid var(--border-md);
+  border-radius: var(--r-xl) var(--r-xl) 0 0;
+  padding: 24px 24px 32px;
+  width: 100%; max-width: 540px;
+  max-height: 92vh;
+  overflow-y: auto;
+  animation: slideUp 0.28s var(--ease) forwards;
+  position: relative;
+}
+@keyframes slideUp {
+  from { transform: translateY(60px); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+
+/* On desktop, center it as a proper dialog */
+@media (min-width: 600px) {
+  .ocr-modal-overlay { align-items: center; }
+  .ocr-modal {
+    border-radius: var(--r-xl);
+    max-width: 500px;
+    animation: fadeIn 0.22s var(--ease) forwards;
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; transform: scale(0.96); }
+    to   { opacity: 1; transform: scale(1); }
+  }
+}
+
+.ocr-modal-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 20px;
+}
+.ocr-modal-title {
+  font-size: 1rem; font-weight: 700; color: var(--t-100);
+  display: flex; align-items: center; gap: 8px;
+}
+.ocr-modal-close {
+  background: none; border: none; cursor: pointer;
+  color: var(--t-400); padding: 4px; border-radius: var(--r-xs);
+  transition: color 0.15s;
+}
+.ocr-modal-close:hover { color: var(--t-100); }
+.ocr-modal-close svg { width: 20px; height: 20px; stroke: currentColor; fill: none; stroke-width: 2; }
+
+/* Drop zone */
+.ocr-dropzone {
+  border: 2px dashed var(--border-md);
+  border-radius: var(--r-lg);
+  padding: 32px 20px;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+  position: relative;
+}
+.ocr-dropzone:hover, .ocr-dropzone.drag-over {
+  border-color: var(--orange);
+  background: var(--orange-dim);
+}
+.ocr-dropzone input[type=file] {
+  position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;
+}
+.ocr-dropzone-icon { font-size: 2.5rem; margin-bottom: 10px; }
+.ocr-dropzone p { font-size: 0.875rem; color: var(--t-400); margin-bottom: 4px; }
+.ocr-dropzone small { font-size: 0.75rem; color: var(--t-600); }
+
+/* Camera button */
+.ocr-camera-btn {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  width: 100%; margin-top: 12px;
+  padding: 12px;
+  background: var(--bg-700); border: 1px solid var(--border-md);
+  border-radius: var(--r-md);
+  color: var(--t-200); font-size: 0.875rem; font-weight: 600;
+  cursor: pointer; transition: all 0.15s;
+}
+.ocr-camera-btn:hover { border-color: var(--orange); color: var(--orange); }
+.ocr-camera-btn svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 2; }
+
+/* Preview */
+.ocr-preview {
+  display: none;
+  border-radius: var(--r-md);
+  overflow: hidden;
+  margin-top: 12px;
+  border: 1px solid var(--border-md);
+  position: relative;
+}
+.ocr-preview img {
+  width: 100%; max-height: 240px; object-fit: cover; display: block;
+}
+.ocr-preview-remove {
+  position: absolute; top: 8px; right: 8px;
+  background: rgba(0,0,0,0.7); border: none; border-radius: 50%;
+  width: 28px; height: 28px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  color: #fff; transition: background 0.15s;
+}
+.ocr-preview-remove:hover { background: rgba(239,68,68,0.8); }
+.ocr-preview-remove svg { width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 2.5; }
+
+/* Confidence badge */
+.conf-badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 4px 10px; border-radius: 20px;
+  font-size: 0.72rem; font-weight: 700;
+  letter-spacing: 0.05em; text-transform: uppercase;
+}
+.conf-high   { background: rgba(34,197,94,0.15);  color: #22c55e; border: 1px solid rgba(34,197,94,0.3); }
+.conf-medium { background: rgba(234,179,8,0.15);  color: #eab308; border: 1px solid rgba(234,179,8,0.3); }
+.conf-low    { background: rgba(239,68,68,0.15);  color: #ef4444; border: 1px solid rgba(239,68,68,0.3); }
+
+/* OCR result preview panel */
+.ocr-result {
+  display: none;
+  background: var(--bg-800);
+  border: 1px solid var(--border-md);
+  border-radius: var(--r-md);
+  padding: 16px;
+  margin-top: 16px;
+}
+.ocr-result-row {
+  display: flex; justify-content: space-between; align-items: flex-start;
+  padding: 5px 0; border-bottom: 1px solid var(--border);
+  font-size: 0.8rem;
+}
+.ocr-result-row:last-child { border-bottom: none; }
+.ocr-result-key { color: var(--t-400); flex-shrink: 0; width: 100px; }
+.ocr-result-val { color: var(--t-100); font-weight: 500; text-align: right; word-break: break-word; }
+
+/* Warnings */
+.ocr-warnings {
+  background: rgba(234,179,8,0.08);
+  border: 1px solid rgba(234,179,8,0.25);
+  border-radius: var(--r-sm);
+  padding: 10px 12px;
+  margin-top: 10px;
+  font-size: 0.78rem;
+  color: #eab308;
+}
+
+/* ── OCR scan button on invoice form ─────────────────────────────── */
+.scan-invoice-btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 9px 18px;
+  background: linear-gradient(135deg, rgba(232,97,10,0.15), rgba(240,160,0,0.1));
+  border: 1px solid rgba(232,97,10,0.4);
+  border-radius: var(--r-md);
+  color: var(--orange);
+  font-size: 0.83rem; font-weight: 600;
+  cursor: pointer; transition: all 0.2s;
+  white-space: nowrap;
+}
+.scan-invoice-btn:hover {
+  background: linear-gradient(135deg, rgba(232,97,10,0.25), rgba(240,160,0,0.18));
+  border-color: var(--orange);
+  box-shadow: var(--shadow-glow);
+  transform: translateY(-1px);
+}
+.scan-invoice-btn svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 2; }
+
+
+/* ══════════════════════════════════════════════════════════════════════════
+   MEDIA QUERIES — Mobile Breakpoints
+   ══════════════════════════════════════════════════════════════════════════ */
+
+@media (max-width: 768px) {
+
+  /* Show hamburger, show bottom nav */
+  .hamburger { display: flex; }
+  .bottom-nav { display: flex; }
+
+  /* Layout: single column, sidebar hidden off-screen */
+  .layout {
+    grid-template-columns: 1fr;
+    padding-bottom: 60px; /* space for bottom nav */
+  }
+
+  /* Sidebar: slide-in drawer from left */
+  .sidebar {
+    transform: translateX(-100%);
+    transition: transform 0.3s var(--ease);
+    z-index: 200;
+    box-shadow: none;
+  }
+  .sidebar.open {
+    transform: translateX(0);
+    box-shadow: 4px 0 40px rgba(0,0,0,0.6);
+  }
+
+  /* Main content: full width */
+  .main-content {
+    margin-left: 0 !important;
+    width: 100%;
+  }
+
+  /* Topbar: show hamburger on left */
+  .topbar {
+    padding: 0 16px;
+    gap: 12px;
+  }
+  .topbar-right { gap: 8px; }
+  .topbar-badge { display: none; } /* hide company name on small screens */
+
+  /* Content area padding */
+  .content-area { padding: 16px; }
+
+  /* Page header: stack vertically */
+  .page-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  .page-header-actions {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+  .page-header-actions .btn { flex: 1; justify-content: center; }
+
+  /* Stats grid: 2 columns on tablet */
+  .stats-grid { grid-template-columns: 1fr 1fr; }
+
+  /* Tables: horizontal scroll */
+  .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+  /* Line item table: tighter */
+  .li-table th, .li-table td { padding: 3px 4px; }
+  .li-table .form-input { padding: 5px 6px; font-size: 0.78rem; }
+
+  /* Form grid: 2 columns on tablet */
+  .form-grid { grid-template-columns: 1fr 1fr; }
+
+  /* Detail grid: stack */
+  .detail-grid { grid-template-columns: 1fr; }
+
+  /* Card padding: reduce */
+  .card-body { padding: 14px; }
+
+  /* Totals panel: full width */
+  .totals-panel { min-width: unset; width: 100%; }
+}
+
+@media (max-width: 480px) {
+
+  /* Stats: single column */
+  .stats-grid { grid-template-columns: 1fr; }
+
+  /* Form grid: single column */
+  .form-grid { grid-template-columns: 1fr; }
+
+  /* Content area: minimal padding */
+  .content-area { padding: 12px; }
+
+  /* Line item table: make product col wider, hide unit on very small */
+  .li-table th:nth-child(4),
+  .li-table td:nth-child(4) { display: none; } /* hide Unit col */
+
+  /* Scan button: full width */
+  .scan-invoice-btn { width: 100%; justify-content: center; }
+
+  /* Toast: full width at bottom */
+  #toast {
+    left: 12px; right: 12px; bottom: 72px;
+    max-width: unset; width: auto;
+  }
+
+  /* Bottom nav item labels: hide on very small */
+  .bn-item span { display: none; }
+  .bn-item { padding: 10px; }
+  .bn-item.bn-scan span { display: block; }
+}
+

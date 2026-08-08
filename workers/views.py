@@ -1,13 +1,99 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
-from django.db.models import Q, Sum
+from django.db.models import Q, Sum, Avg, Count
 from django.utils import timezone
+from rest_framework import viewsets, permissions, status
+from rest_framework.decorators import action
+from rest_framework.response import Response
+
 from .models import Worker, DailyWorkLog
 from .forms import WorkerForm, DailyWorkLogForm
+from .serializers import WorkerSerializer, DailyWorkLogSerializer
 
 
-# ─── Worker List ─────────────────────────────────────────────────────────────
+# ─── REST API ViewSets ───────────────────────────────────────────────────────
+
+class WorkerViewSet(viewsets.ModelViewSet):
+    serializer_class = WorkerSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        qs = Worker.objects.all().order_by('name')
+        q = self.request.query_params.get('q', '').strip()
+        role = self.request.query_params.get('role', '').strip()
+        is_active = self.request.query_params.get('is_active', '').strip()
+
+        if q:
+            qs = qs.filter(Q(name__icontains=q) | Q(mobile__icontains=q) | Q(role__icontains=q))
+        if role and role != 'all':
+            qs = qs.filter(role__iexact=role)
+        if is_active.lower() == 'true':
+            qs = qs.filter(is_active=True)
+        elif is_active.lower() == 'false':
+            qs = qs.filter(is_active=False)
+
+        return qs
+
+    @action(detail=True, methods=['get'])
+    def history(self, request, pk=None):
+        worker = self.get_object()
+        logs = worker.work_logs.select_related('invoice').all().order_by('-date', '-created_at')
+        log_serializer = DailyWorkLogSerializer(logs, many=True)
+
+        agg = logs.aggregate(
+            total_wages=Sum('wages'),
+            avg_wage=Avg('wages'),
+            job_count=Count('id')
+        )
+
+        last_log = logs.first()
+        last_date = last_log.date if last_log else None
+
+        return Response({
+            'worker': WorkerSerializer(worker).data,
+            'stats': {
+                'total_wages': agg['total_wages'] or 0,
+                'avg_wage': agg['avg_wage'] or 0,
+                'job_count': agg['job_count'] or 0,
+                'last_date': last_date,
+            },
+            'logs': log_serializer.data,
+        })
+
+
+class DailyWorkLogViewSet(viewsets.ModelViewSet):
+    serializer_class = DailyWorkLogSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        qs = DailyWorkLog.objects.select_related('worker', 'invoice').all().order_by('-date', '-created_at')
+        worker_id = self.request.query_params.get('worker', '').strip()
+        date_from = self.request.query_params.get('date_from', '').strip()
+        date_to = self.request.query_params.get('date_to', '').strip()
+        car_number = self.request.query_params.get('car_number', '').strip()
+        q = self.request.query_params.get('q', '').strip()
+
+        if worker_id:
+            qs = qs.filter(worker_id=worker_id)
+        if date_from:
+            qs = qs.filter(date__gte=date_from)
+        if date_to:
+            qs = qs.filter(date__lte=date_to)
+        if car_number:
+            qs = qs.filter(car_number__icontains=car_number)
+        if q:
+            qs = qs.filter(
+                Q(worker__name__icontains=q) |
+                Q(car_number__icontains=q) |
+                Q(car_model__icontains=q) |
+                Q(work_description__icontains=q)
+            )
+
+        return qs
+
+
+# ─── Traditional Django HTML Template Views ─────────────────────────────────
 
 @login_required
 def worker_list(request):
@@ -19,8 +105,6 @@ def worker_list(request):
         )
     return render(request, 'workers/worker_list.html', {'workers': workers, 'query': q})
 
-
-# ─── Worker Create ───────────────────────────────────────────────────────────
 
 @login_required
 def worker_create(request):
@@ -35,8 +119,6 @@ def worker_create(request):
     return render(request, 'workers/worker_form.html', {'form': form, 'title': 'New Worker', 'action': 'Add'})
 
 
-# ─── Worker Detail ───────────────────────────────────────────────────────────
-
 @login_required
 def worker_detail(request, pk):
     worker = get_object_or_404(Worker, pk=pk)
@@ -48,8 +130,6 @@ def worker_detail(request, pk):
         'total_wages': total_wages,
     })
 
-
-# ─── Worker Edit ─────────────────────────────────────────────────────────────
 
 @login_required
 def worker_edit(request, pk):
@@ -70,8 +150,6 @@ def worker_edit(request, pk):
     })
 
 
-# ─── Worker Delete ───────────────────────────────────────────────────────────
-
 @login_required
 def worker_delete(request, pk):
     worker = get_object_or_404(Worker, pk=pk)
@@ -83,13 +161,10 @@ def worker_delete(request, pk):
     return render(request, 'workers/worker_confirm_delete.html', {'worker': worker})
 
 
-# ─── Work Log List ───────────────────────────────────────────────────────────
-
 @login_required
 def worklog_list(request):
     logs = DailyWorkLog.objects.select_related('worker', 'invoice').all()
 
-    # Filters
     worker_id = request.GET.get('worker', '').strip()
     date_from = request.GET.get('date_from', '').strip()
     date_to = request.GET.get('date_to', '').strip()
@@ -118,8 +193,6 @@ def worklog_list(request):
     })
 
 
-# ─── Work Log Create ────────────────────────────────────────────────────────
-
 @login_required
 def worklog_create(request):
     if request.method == 'POST':
@@ -136,8 +209,6 @@ def worklog_create(request):
         'action': 'Add',
     })
 
-
-# ─── Work Log Edit ──────────────────────────────────────────────────────────
 
 @login_required
 def worklog_edit(request, pk):
@@ -157,8 +228,6 @@ def worklog_edit(request, pk):
         'action': 'Update',
     })
 
-
-# ─── Work Log Delete ────────────────────────────────────────────────────────
 
 @login_required
 def worklog_delete(request, pk):

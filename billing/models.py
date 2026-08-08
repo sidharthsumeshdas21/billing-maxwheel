@@ -101,3 +101,57 @@ class LineItem(models.Model):
 
     def __str__(self):
         return f"{self.sr_no}. {self.product_name}"
+
+
+# ─── Customer Notes ───────────────────────────────────────────────────────────
+
+class CustomerNote(models.Model):
+    """
+    Free-text notes attached to a customer.
+    Examples: "has a Fortuner and a Swift", "prefers synthetic oil", "fleet account".
+    No image storage — purely text. Safe for Supabase free tier.
+    """
+    customer = models.ForeignKey(
+        Customer,
+        on_delete=models.CASCADE,
+        related_name='customer_notes',
+    )
+    text = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"Note for {self.customer.name}: {self.text[:50]}"
+
+
+# ─── WhatsApp / SMS Delivery Log ──────────────────────────────────────────────
+
+class SMSLog(models.Model):
+    """
+    Audit trail for every WhatsApp notification sent (or attempted) after an invoice is saved.
+    Lets the business track delivery and debug failures without touching Twilio console.
+    """
+    STATUS_SENT    = 'sent'
+    STATUS_FAILED  = 'failed'
+    STATUS_SKIPPED = 'skipped'
+    STATUS_CHOICES = [
+        (STATUS_SENT,    'Sent'),
+        (STATUS_FAILED,  'Failed'),
+        (STATUS_SKIPPED, 'Skipped'),
+    ]
+
+    invoice       = models.ForeignKey(Invoice, on_delete=models.CASCADE, related_name='sms_logs')
+    phone         = models.CharField(max_length=40, blank=True)
+    status        = models.CharField(max_length=20, choices=STATUS_CHOICES)
+    twilio_sid    = models.CharField(max_length=64, blank=True)
+    error_message = models.TextField(blank=True)
+    sent_at       = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-sent_at']
+
+    def __str__(self):
+        return f"WhatsApp {self.status} → {self.phone} (Invoice {self.invoice.invoice_number})"

@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Customer, Invoice, LineItem
+from .models import Customer, Invoice, LineItem, SMSLog
 
 
 class LineItemInline(admin.TabularInline):
@@ -26,3 +26,12 @@ class CustomerAdmin(admin.ModelAdmin):
 @admin.register(LineItem)
 class LineItemAdmin(admin.ModelAdmin):
     list_display = ('invoice', 'sr_no', 'product_name', 'quantity', 'unit', 'rate', 'amount')
+
+
+@admin.register(SMSLog)
+class SMSLogAdmin(admin.ModelAdmin):
+    list_display  = ('invoice', 'phone', 'status', 'twilio_sid', 'sent_at')
+    list_filter   = ('status', 'sent_at')
+    search_fields = ('invoice__invoice_number', 'phone', 'twilio_sid')
+    readonly_fields = ('invoice', 'phone', 'status', 'twilio_sid', 'error_message', 'sent_at')
+    date_hierarchy = 'sent_at'

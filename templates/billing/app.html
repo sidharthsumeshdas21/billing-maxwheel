@@ -1,257 +1,580 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="h-full bg-[#0A0A0B]">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>MaxWheel Billing</title>
-  <meta name="description" content="MaxWheel Auto Services — Invoice & Customer Management">
+  <title>MaxWheel Billing — Auto Services</title>
+  <meta name="description" content="MaxWheel Auto Services — Premium Invoice & Customer Management SPA">
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
   {% load static %}
-  <link rel="stylesheet" href="{% static 'style.css' %}">
+  
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-  <style>
-    /* ── SPA additions ─────────────────────────────────────── */
-    :root { --orange: #e8610a; --orange-dim: rgba(232,97,10,.15); }
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#fff7ed',
+              100: '#ffedd5',
+              200: '#fed7aa',
+              300: '#fdba74',
+              400: '#fb923c',
+              500: '#f97316',
+              600: '#ea580c',
+              700: '#c2410c',
+              800: '#9a3412',
+              900: '#7c2d12',
+              accent: '#f97316',
+              hover: '#ea580c',
+            },
+            surface: {
+              DEFAULT: '#121215',
+              card: '#121215',
+              hover: '#18181b',
+              active: '#202024',
+              input: '#09090b',
+              border: '#27272a',
+              subtle: '#1f1f23',
+            }
+          },
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          }
+        }
+      }
+    }
+  </script>
+  <style type="text/tailwindcss">
+    @layer base {
+      body { background-color: #0A0A0B; color: #FAFAFA; font-family: 'Inter', sans-serif; }
+    }
+    
+    /* Thin custom scrollbar */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #0A0A0B; }
+    ::-webkit-scrollbar-thumb { background: #27272A; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #3F3F46; }
+    
+    .tabular-nums { font-variant-numeric: tabular-nums; }
+    
+    /* Skeleton Shimmer Loading Effect */
+    @keyframes shimmer {
+      0% { opacity: 0.4; }
+      50% { opacity: 0.8; }
+      100% { opacity: 0.4; }
+    }
+    .skeleton-pulse { animation: shimmer 1.5s ease-in-out infinite; }
 
-    /* Loading */
-    .page-loading { display:flex; align-items:center; justify-content:center; min-height:320px; }
-    .spin { width:36px; height:36px; border:3px solid var(--border,#2a2a2a);
-            border-top-color:var(--orange); border-radius:50%; animation:spin .7s linear infinite; }
-    @keyframes spin { to { transform:rotate(360deg); } }
+    /* Custom Toast Animations */
+    #toast-container {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      pointer-events: none;
+    }
+    .toast-card {
+      pointer-events: auto;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 18px;
+      border-radius: 12px;
+      font-size: 0.875rem;
+      font-weight: 500;
+      background: #121215;
+      color: #FAFAFA;
+      border: 1px solid #27272A;
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.5);
+      transform: translateY(20px);
+      opacity: 0;
+      transition: all 200ms cubic-bezier(0.16, 1, 0.3, 1);
+      max-width: 400px;
+    }
+    .toast-card.show { transform: translateY(0); opacity: 1; }
+    .toast-card.ok { border-color: rgba(249, 115, 22, 0.4); background: #1C120B; color: #FFEDD5; }
+    .toast-card.success { border-color: rgba(16, 185, 129, 0.4); background: #0D1F17; color: #D1FAE5; }
+    .toast-card.err { border-color: rgba(244, 63, 94, 0.4); background: #241116; color: #FFE4E6; }
+    .toast-card.warn { border-color: rgba(245, 158, 11, 0.4); background: #221708; color: #FEF3C7; }
 
-    /* Toast */
-    #toast { position:fixed; bottom:28px; right:28px; z-index:9999;
-             padding:12px 20px; border-radius:8px; font-size:.875rem; font-weight:500;
-             background:#1e1e1e; color:#f0f0f0; border:1px solid #333;
-             box-shadow:0 8px 32px rgba(0,0,0,.5);
-             transform:translateY(20px); opacity:0; pointer-events:none;
-             transition:all .25s ease; max-width:360px; }
-    #toast.show { transform:translateY(0); opacity:1; }
-    #toast.ok  { border-color:var(--orange); background:#1a1000; color:#f5a623; }
-    #toast.err { border-color:#c0392b; background:#1a0000; color:#e74c3c; }
+    /* Table row hover micro-interaction */
+    .table-row-hover {
+      transition: all 150ms ease-out;
+    }
+    .table-row-hover:hover {
+      background-color: rgba(24, 24, 27, 0.7);
+      transform: translateY(-1px);
+    }
 
-    /* Stats grid */
-    .stats-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:16px; margin-bottom:24px; }
-    .stat-card { background:var(--bg-800,#1a1a1a); border:1px solid var(--border,#2a2a2a);
-                 border-radius:var(--r,10px); padding:22px 20px; }
-    .stat-label { font-size:.73rem; font-weight:600; letter-spacing:.06em; text-transform:uppercase;
-                  color:var(--t-500,#777); margin-bottom:8px; }
-    .stat-value { font-size:1.8rem; font-weight:800; color:var(--orange); font-variant-numeric:tabular-nums; }
+    /* Standard Card Elevation */
+    .card-elevation {
+      background-color: #121215;
+      border: 1px solid #27272A;
+      border-radius: 16px;
+      transition: all 150ms ease-out;
+    }
+    .card-elevation:hover {
+      border-color: #3F3F46;
+      box-shadow: 0 10px 30px -10px rgba(0,0,0,0.5);
+    }
 
-    /* Clickable rows */
-    tr.clickable { cursor:pointer; transition:background .15s; }
-    tr.clickable:hover { background:var(--bg-750,#1e1e1e) !important; }
-
-    /* Icon button (edit in table) */
-    .icon-btn { background:none; border:1px solid transparent; border-radius:6px; padding:5px 7px;
-                cursor:pointer; color:var(--t-500,#777); transition:all .15s; line-height:0; }
-    .icon-btn:hover { border-color:var(--border,#333); color:var(--orange); }
-    .icon-btn svg { display:block; }
-
-    /* Add row button */
-    .add-row-btn { margin-top:12px; display:flex; align-items:center; gap:6px; background:none;
-                   border:1px dashed var(--border,#333); border-radius:8px; padding:8px 16px;
-                   color:var(--t-500,#777); font-size:.83rem; cursor:pointer; transition:all .2s;
-                   width:100%; justify-content:center; }
-    .add-row-btn:hover { border-color:var(--orange); color:var(--orange); }
-    .add-row-btn svg { width:14px; height:14px; stroke:currentColor; fill:none;
-                       stroke-width:2; stroke-linecap:round; }
-
-    /* Line item table */
-    .li-table { width:100%; border-collapse:collapse; }
-    .li-table th { background:var(--bg-750,#1e1e1e); font-size:.73rem; font-weight:600;
-                   letter-spacing:.05em; text-transform:uppercase; color:var(--t-500,#777);
-                   padding:8px 10px; border-bottom:1px solid var(--border,#2a2a2a); white-space:nowrap; }
-    .li-table td { padding:4px 6px; border-bottom:1px solid var(--border,#2a2a2a); vertical-align:middle; }
-    .li-table .td-sr { text-align:center; color:var(--t-500,#777); font-size:.8rem; width:32px; }
-    .li-table .td-amount { text-align:right; font-weight:600; font-variant-numeric:tabular-nums;
-                           color:var(--t-100,#eee); white-space:nowrap; padding-right:12px; }
-    .li-table .th-right { text-align:right; }
-    .li-del-btn { background:none; border:none; color:var(--t-600,#555); cursor:pointer;
-                  padding:5px; border-radius:4px; transition:color .15s; line-height:0; }
-    .li-del-btn:hover { color:#e74c3c; }
-    .li-del-btn svg { width:14px; height:14px; stroke:currentColor; fill:none;
-                      stroke-width:2.5; stroke-linecap:round; display:block; }
-    .li-table .form-input { padding:6px 8px; font-size:.83rem; }
-
-    /* Detail labels */
-    .detail-label { font-size:.7rem; font-weight:700; letter-spacing:.07em; text-transform:uppercase;
-                    color:var(--t-500,#777); margin-bottom:4px; }
-    .divider { border:none; border-top:1px solid var(--border,#2a2a2a); margin:20px 0; }
-
-    /* Text helpers */
-    .text-mono { font-variant-numeric:tabular-nums; }
-    .text-right { text-align:right; }
-    .fw-600 { font-weight:600; }
-    .text-dim { color:var(--t-500,#777); }
-    .text-orange { color:var(--orange); }
-
-    /* Empty state */
-    .empty-state { display:flex; flex-direction:column; align-items:center; justify-content:center;
-                   min-height:220px; gap:10px; color:var(--t-600,#555); }
-    .empty-state h2 { font-size:1.1rem; color:var(--t-400,#888); }
-    .empty-state p { font-size:.875rem; }
-
-    /* Totals */
-    .totals-panel { background:var(--bg-800,#1a1a1a); border:1px solid var(--border,#2a2a2a);
-                    border-radius:var(--r,10px); padding:16px 20px; min-width:260px; }
-    .totals-row { display:flex; justify-content:space-between; align-items:center;
-                  padding:6px 0; border-bottom:1px solid var(--border,#222); font-size:.875rem; }
-    .totals-row:last-child { border-bottom:none; }
-    .totals-row.grand { margin-top:4px; padding-top:10px; }
-    .totals-row.grand .tr-label,
-    .totals-row.grand .tr-val { font-size:1.1rem; font-weight:700; color:var(--orange); }
-    .tr-label { color:var(--t-500,#777); }
-    .tr-val { font-weight:600; font-variant-numeric:tabular-nums; color:var(--t-100,#eee); }
-
-    /* Responsive form grid */
-    .form-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:14px; }
-
-
-    /* Nav active state override */
-    .nav-link.active { color:var(--orange) !important; background:var(--orange-dim) !important; }
+    /* Sidebar Collapse Overrides */
+    #sidebar { transition: width 200ms cubic-bezier(0.16, 1, 0.3, 1); }
+    #sidebar.sidebar-collapsed { width: 72px !important; }
+    #sidebar.sidebar-collapsed .sidebar-hide-on-collapse { display: none !important; }
+    #sidebar.sidebar-collapsed .nav-link { justify-content: center; padding-left: 0; padding-right: 0; }
+    #sidebar.sidebar-collapsed .brand-header { padding-left: 10px; padding-right: 10px; justify-content: center; }
+    #sidebar.sidebar-collapsed .quick-ai-btn { justify-content: center; padding-left: 0; padding-right: 0; }
+    #sidebar.sidebar-collapsed .user-footer-btn { justify-content: center; padding-left: 0; padding-right: 0; }
   </style>
 </head>
-<body>
+<body class="bg-[#0A0A0B] text-zinc-100 font-sans overflow-hidden h-screen flex flex-col antialiased">
 
 {% if user.is_authenticated %}
-<div class="layout">
+<!-- ── APP SHELL CONTAINER ────────────────────────────────────────────────── -->
+<div class="flex flex-1 h-screen overflow-hidden relative">
 
-<!-- ── Sidebar ──────────────────────────────────────────────────────────── -->
-<aside class="sidebar" id="sidebar">
-  <div class="sidebar-brand">
-    <img src="{% static 'img/logo.png' %}" alt="MaxWheel Logo" class="brand-logo" style="background:#fff;padding:2px;">
-    <div class="brand-text">
-      <div class="name">UNDERGROUND</div>
-      <div class="sub">Maxwheel Auto Services</div>
+  <!-- ── Sidebar Navigation ──────────────────────────────────────────────── -->
+  <aside id="sidebar" class="hidden lg:flex flex-col w-64 bg-[#0D0D0F] border-r border-zinc-800/80 h-full shrink-0 z-40 transition-transform duration-200">
+    
+    <!-- Brand Header with Logo -->
+    <a href="#/dashboard" class="brand-header h-16 px-5 flex items-center gap-3 border-b border-zinc-800/60 relative group cursor-pointer">
+      <div class="w-10 h-10 rounded-xl bg-white/10 p-1 border border-orange-500/30 flex items-center justify-center shrink-0 shadow-md shadow-orange-500/10 group-hover:scale-105 transition-transform">
+        <img src="{% static 'img/logo.png' %}" alt="MaxWheel Logo" class="w-full h-full object-contain">
+      </div>
+      <div class="sidebar-hide-on-collapse">
+        <div class="font-bold tracking-wider text-sm text-white group-hover:text-orange-400 transition-colors">MAXWHEEL</div>
+        <div class="text-[10px] text-orange-400 uppercase tracking-widest font-bold">Auto Services</div>
+      </div>
+    </a>
+
+    <!-- Navigation Links -->
+    <nav class="flex-1 overflow-y-auto py-4 px-3 flex flex-col gap-1">
+      <div class="nav-section-title text-[10px] font-bold text-zinc-500 uppercase tracking-widest px-3 mb-2 mt-2 sidebar-hide-on-collapse">Main</div>
+      
+      <a class="nav-link flex items-center gap-3 px-3 py-2.5 text-zinc-400 hover:text-white hover:bg-zinc-800/60 rounded-xl transition-all group font-medium text-sm" data-route="/dashboard" href="#/dashboard" title="Dashboard">
+        <svg class="w-4 h-4 stroke-current fill-none group-hover:text-orange-400 transition-colors shrink-0" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+        <span class="sidebar-hide-on-collapse">Dashboard</span>
+      </a>
+      
+      <div class="nav-section-title text-[10px] font-bold text-zinc-500 uppercase tracking-widest px-3 mb-2 mt-5 sidebar-hide-on-collapse">Invoices</div>
+      
+      <a class="nav-link flex items-center gap-3 px-3 py-2.5 text-zinc-400 hover:text-white hover:bg-zinc-800/60 rounded-xl transition-all group font-medium text-sm" data-route="/invoices" href="#/invoices" title="All Invoices">
+        <svg class="w-4 h-4 stroke-current fill-none group-hover:text-orange-400 transition-colors shrink-0" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+        <span class="sidebar-hide-on-collapse">All Invoices</span>
+      </a>
+      
+      <a class="nav-link flex items-center gap-3 px-3 py-2.5 text-zinc-400 hover:text-white hover:bg-zinc-800/60 rounded-xl transition-all group font-medium text-sm" data-route="/invoices/new" href="#/invoices/new" title="New Invoice">
+        <svg class="w-4 h-4 stroke-current fill-none group-hover:text-orange-400 transition-colors shrink-0" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+        <span class="sidebar-hide-on-collapse">New Invoice</span>
+      </a>
+      
+      <div class="nav-section-title text-[10px] font-bold text-zinc-500 uppercase tracking-widest px-3 mb-2 mt-5 sidebar-hide-on-collapse">Customers</div>
+      
+      <a class="nav-link flex items-center gap-3 px-3 py-2.5 text-zinc-400 hover:text-white hover:bg-zinc-800/60 rounded-xl transition-all group font-medium text-sm" data-route="/customers" href="#/customers" title="Customers Directory">
+        <svg class="w-4 h-4 stroke-current fill-none group-hover:text-orange-400 transition-colors shrink-0" stroke-width="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        <span class="sidebar-hide-on-collapse">Customers</span>
+      </a>
+      
+      <a class="nav-link flex items-center gap-3 px-3 py-2.5 text-zinc-400 hover:text-white hover:bg-zinc-800/60 rounded-xl transition-all group font-medium text-sm" data-route="/customers/new" href="#/customers/new" title="New Customer">
+        <svg class="w-4 h-4 stroke-current fill-none group-hover:text-orange-400 transition-colors shrink-0" stroke-width="2" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>
+        <span class="sidebar-hide-on-collapse">New Customer</span>
+      </a>
+
+      <div class="nav-section-title text-[10px] font-bold text-zinc-500 uppercase tracking-widest px-3 mb-2 mt-5 sidebar-hide-on-collapse">Workers</div>
+      
+      <a class="nav-link flex items-center gap-3 px-3 py-2.5 text-zinc-400 hover:text-white hover:bg-zinc-800/60 rounded-xl transition-all group font-medium text-sm" data-route="/workers" href="#/workers" title="Workers Directory">
+        <svg class="w-4 h-4 stroke-current fill-none group-hover:text-orange-400 transition-colors shrink-0" stroke-width="2" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        <span class="sidebar-hide-on-collapse">Workers Directory</span>
+      </a>
+
+      <a class="nav-link flex items-center gap-3 px-3 py-2.5 text-zinc-400 hover:text-white hover:bg-zinc-800/60 rounded-xl transition-all group font-medium text-sm" data-route="/workers/logs" href="#/workers/logs" title="Daily Work Logs">
+        <svg class="w-4 h-4 stroke-current fill-none group-hover:text-orange-400 transition-colors shrink-0" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        <span class="sidebar-hide-on-collapse">Daily Work Logs</span>
+      </a>
+    </nav>
+
+    <!-- Quick Action AI Buttons -->
+    <div class="p-3 border-t border-zinc-800/60 space-y-2">
+      <button onclick="DrawerManager.open('scanner')" class="quick-ai-btn w-full flex items-center gap-2.5 px-3 py-2.5 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 hover:border-orange-500/40 text-xs text-zinc-200 rounded-xl font-medium transition-all group" title="Scan Photo Invoice">
+        <div class="w-6 h-6 rounded-lg bg-orange-500/10 text-orange-400 flex items-center justify-center group-hover:scale-110 transition-transform shrink-0">
+          <svg class="w-3.5 h-3.5 stroke-current fill-none" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="12" cy="12" r="3"/></svg>
+        </div>
+        <span class="sidebar-hide-on-collapse">Scan Photo Invoice</span>
+        <span class="ml-auto text-[9px] font-bold bg-orange-500/20 text-orange-300 px-1.5 py-0.5 rounded sidebar-hide-on-collapse">AI</span>
+      </button>
+
+      <button onclick="DrawerManager.open('chatbot')" class="quick-ai-btn w-full flex items-center gap-2.5 px-3 py-2.5 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 hover:border-emerald-500/40 text-xs text-zinc-200 rounded-xl font-medium transition-all group" title="Ask AI Assistant">
+        <div class="w-6 h-6 rounded-lg bg-emerald-500/10 text-emerald-400 flex items-center justify-center group-hover:scale-110 transition-transform shrink-0">
+          <svg class="w-3.5 h-3.5 stroke-current fill-none" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        </div>
+        <span class="sidebar-hide-on-collapse">Ask AI Assistant</span>
+        <span class="ml-auto text-[9px] font-bold bg-emerald-500/20 text-emerald-300 px-1.5 py-0.5 rounded sidebar-hide-on-collapse">Chat</span>
+      </button>
     </div>
+
+    <!-- User / Logout Footer -->
+    <div class="p-3 border-t border-zinc-800/60 bg-[#0A0A0B]">
+      <form action="/logout/" method="post">
+        {% csrf_token %}
+        <button type="submit" class="user-footer-btn w-full flex items-center justify-between px-3 py-2 text-zinc-400 hover:text-rose-400 hover:bg-rose-500/10 rounded-xl transition-all text-xs font-medium group" title="Logout">
+          <div class="flex items-center gap-2">
+            <div class="w-6 h-6 rounded-full bg-orange-600 text-white font-bold text-[10px] flex items-center justify-center shrink-0">
+              {{ user.username|first|upper }}
+            </div>
+            <span class="truncate max-w-[110px] text-zinc-300 font-semibold sidebar-hide-on-collapse">{{ user.username }}</span>
+          </div>
+          <svg class="w-4 h-4 stroke-current fill-none group-hover:translate-x-0.5 transition-transform sidebar-hide-on-collapse" stroke-width="2" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        </button>
+      </form>
+    </div>
+  </aside>
+
+  <!-- Mobile Sidebar Backdrop -->
+  <div id="sidebar-backdrop" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-30 hidden transition-opacity lg:hidden" onclick="toggleMobileSidebar(false)"></div>
+
+  <!-- ── Main Content Area ────────────────────────────────────────────────── -->
+  <div class="flex-1 flex flex-col min-w-0 h-full bg-[#0A0A0B]">
+    
+    <!-- Top Header Bar -->
+    <header class="h-16 shrink-0 flex items-center justify-between px-4 lg:px-8 border-b border-zinc-800/80 bg-[#0D0D0F]/90 backdrop-blur-md sticky top-0 z-20">
+      
+      <div class="flex items-center gap-2 lg:gap-3">
+        <button id="hamburger-btn" onclick="toggleMobileSidebar(true)" class="lg:hidden p-2 -ml-2 text-zinc-400 hover:text-white rounded-lg hover:bg-zinc-800 transition-colors">
+          <svg class="w-5 h-5 stroke-current fill-none" stroke-width="2" viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        </button>
+
+        <!-- Desktop Sidebar Collapse/Expand Toggle Button -->
+        <button id="sidebar-toggle-btn" onclick="toggleSidebarCollapse()" class="hidden lg:flex p-2 -ml-2 text-zinc-400 hover:text-white rounded-xl hover:bg-zinc-800 transition-colors" title="Collapse / Expand Sidebar (Ctrl+B)">
+          <svg class="w-5 h-5 stroke-current fill-none" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="3" x2="9" y2="21"/><path d="M14 15l-3-3 3-3"/></svg>
+        </button>
+        
+        <div class="flex items-center gap-2.5">
+          <a href="#/dashboard"><img src="{% static 'img/logo.png' %}" alt="Logo" class="w-7 h-7 object-contain rounded-lg lg:hidden hover:scale-105 transition-transform cursor-pointer"></a>
+          <div class="flex items-center gap-2 text-xs font-medium">
+            <a href="#/dashboard" class="text-zinc-400 hover:text-orange-400 transition-colors cursor-pointer font-semibold hover:underline">MaxWheel</a>
+            <svg class="w-3.5 h-3.5 text-zinc-600 stroke-current fill-none" stroke-width="2" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
+            <h1 id="topbar-title" class="font-semibold text-zinc-100 text-sm">Dashboard</h1>
+          </div>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-3">
+        <!-- Quick Scanner CTA Button -->
+        <button onclick="DrawerManager.open('scanner')" class="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 hover:border-orange-500/40 text-xs text-zinc-200 rounded-xl font-medium transition-all">
+          <svg class="w-4 h-4 text-orange-400 stroke-current fill-none" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="12" cy="12" r="3"/></svg>
+          <span>Scan Invoice</span>
+        </button>
+
+        <!-- Quick AI Chat CTA Button -->
+        <button onclick="DrawerManager.open('chatbot')" class="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 hover:border-emerald-500/40 text-xs text-zinc-200 rounded-xl font-medium transition-all">
+          <svg class="w-4 h-4 text-emerald-400 stroke-current fill-none" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          <span>Ask AI</span>
+        </button>
+
+        <!-- Shop Badge -->
+        <span class="px-3 py-1 bg-zinc-900 border border-zinc-800 rounded-full text-xs font-medium text-zinc-400 hidden md:inline-block">
+          Counter Console
+        </span>
+
+        <!-- User Avatar -->
+        <div class="w-8 h-8 rounded-full bg-orange-600/30 border border-orange-500/40 flex items-center justify-center text-orange-300 font-bold text-xs shadow-md">
+          {{ user.username|first|upper }}
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Dynamic Content Container -->
+    <main id="content" class="flex-1 overflow-y-auto p-4 lg:p-8 pb-24 lg:pb-8">
+      <div class="flex items-center justify-center min-h-[300px]">
+        <div class="w-8 h-8 border-2 border-orange-500/30 border-t-orange-500 rounded-full animate-spin"></div>
+      </div>
+    </main>
+
+  </div>
+</div>
+
+<!-- ── MOBILE BOTTOM NAVIGATION ────────────────────────────────────────── -->
+<nav id="bottom-nav" class="lg:hidden fixed bottom-0 left-0 right-0 h-16 bg-[#0D0D0F]/95 backdrop-blur-md border-t border-zinc-800/80 flex items-center justify-around z-20 px-2 pb-safe">
+  <a class="bn-item flex flex-col items-center justify-center w-full h-full text-zinc-500 hover:text-zinc-200 transition-colors" href="#/dashboard" data-bn="/dashboard">
+    <svg class="w-5 h-5 stroke-current fill-none" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+    <span class="text-[10px] mt-1 font-medium">Home</span>
+  </a>
+  
+  <a class="bn-item flex flex-col items-center justify-center w-full h-full text-zinc-500 hover:text-zinc-200 transition-colors" href="#/invoices" data-bn="/invoices">
+    <svg class="w-5 h-5 stroke-current fill-none" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+    <span class="text-[10px] mt-1 font-medium">Invoices</span>
+  </a>
+  
+  <!-- Center Action Button -->
+  <button class="flex flex-col items-center justify-center w-full h-full text-orange-400 group relative -top-3" onclick="DrawerManager.open('scanner')">
+    <div class="bg-orange-600 text-white w-12 h-12 rounded-full flex items-center justify-center shadow-lg shadow-orange-600/40 group-hover:scale-105 transition-transform ring-4 ring-[#0A0A0B]">
+      <svg class="w-6 h-6 stroke-current fill-none" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="12" cy="12" r="3"/></svg>
+    </div>
+  </button>
+  
+  <a class="bn-item flex flex-col items-center justify-center w-full h-full text-zinc-500 hover:text-zinc-200 transition-colors" href="#/customers" data-bn="/customers">
+    <svg class="w-5 h-5 stroke-current fill-none" stroke-width="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+    <span class="text-[10px] mt-1 font-medium">Customers</span>
+  </a>
+  
+  <a class="bn-item flex flex-col items-center justify-center w-full h-full text-zinc-500 hover:text-zinc-200 transition-colors" href="#/workers" data-bn="/workers">
+    <svg class="w-5 h-5 stroke-current fill-none" stroke-width="2" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+    <span class="text-[10px] mt-1 font-medium">Workers</span>
+  </a>
+</nav>
+
+<!-- ── STANDARDIZED UNIFIED DRAWER BASE COMPONENT ────────────────────────── -->
+<div id="drawer-backdrop" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 hidden transition-opacity duration-200" onclick="DrawerManager.close()"></div>
+
+<aside id="drawer-container" class="fixed top-0 right-0 bottom-0 w-full md:w-[500px] lg:w-[560px] bg-[#0E0E11] border-l border-zinc-800/80 shadow-2xl z-50 flex flex-col transform translate-x-full transition-transform duration-200 ease-out" tabIndex="-1">
+  
+  <!-- Drawer Standard Header -->
+  <div class="h-16 px-6 border-b border-zinc-800/80 bg-[#121215]/90 backdrop-blur flex items-center justify-between shrink-0">
+    <div class="flex items-center gap-3">
+      <div id="drawer-icon-box" class="w-8 h-8 rounded-xl bg-orange-500/10 text-orange-400 flex items-center justify-center border border-orange-500/20">
+        <svg class="w-4 h-4 stroke-current fill-none" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="12" cy="12" r="3"/></svg>
+      </div>
+      <div>
+        <h2 id="drawer-title" class="font-semibold text-zinc-100 text-sm">Drawer Panel</h2>
+        <p id="drawer-subtitle" class="text-[10px] text-zinc-500">Sub-description</p>
+      </div>
+    </div>
+    <button onclick="DrawerManager.close()" class="p-2 text-zinc-400 hover:text-white rounded-xl hover:bg-zinc-800 transition-colors">
+      <svg class="w-5 h-5 stroke-current fill-none" stroke-width="2" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
   </div>
 
-  <nav class="sidebar-nav">
-    <div class="nav-section">Main</div>
+  <!-- Drawer Body Content Slots -->
+  <div class="flex-1 overflow-y-auto p-6 relative">
+    
+    <!-- SLOT 1: AI SCANNER DRAWER CONTENT -->
+    <div id="drawer-slot-scanner" class="hidden space-y-6">
+      <div class="p-4 bg-orange-500/10 border border-orange-500/20 rounded-xl text-xs text-orange-300 flex items-start gap-3">
+        <svg class="w-5 h-5 text-orange-400 shrink-0 mt-0.5 stroke-current fill-none" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+        <p class="leading-relaxed">Upload a clear photo of a handwritten invoice sheet. MaxWheel AI extracts items, customer info, and total amounts automatically.</p>
+      </div>
 
-    <a class="nav-link" data-route="/dashboard" href="#/dashboard">
-      <span class="nav-ico">
-        <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
-      </span>
-      Dashboard
-    </a>
+      <!-- Dropzone -->
+      <div id="ocr-dropzone" class="border-2 border-dashed border-zinc-800 hover:border-orange-500/50 rounded-2xl bg-zinc-900/40 hover:bg-zinc-900/80 p-8 flex flex-col items-center justify-center text-center cursor-pointer transition-all relative group">
+        <input type="file" id="ocr-file-input" accept="image/*" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer">
+        <div class="w-14 h-14 rounded-2xl bg-orange-600/10 group-hover:bg-orange-600/20 text-orange-400 flex items-center justify-center mb-3 transition-colors">
+          <svg class="w-7 h-7 stroke-current fill-none" stroke-width="1.5" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        </div>
+        <p class="text-sm font-semibold text-zinc-200">Click to upload photo or drag & drop</p>
+        <p class="text-xs text-zinc-500 mt-1">PNG, JPG, WebP (up to 5MB)</p>
+      </div>
 
-    <div class="nav-section">Invoices</div>
+      <div class="flex items-center gap-3">
+        <button onclick="document.getElementById('ocr-camera-input').click()" class="flex-1 py-3 px-4 bg-zinc-900 hover:bg-zinc-800 text-zinc-200 border border-zinc-800 hover:border-zinc-700 rounded-xl text-xs font-medium flex items-center justify-center gap-2 transition-all">
+          <svg class="w-4 h-4 text-zinc-400 stroke-current fill-none" stroke-width="2" viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+          <span>Use Camera</span>
+        </button>
+        <input type="file" id="ocr-camera-input" accept="image/*" capture="environment" class="hidden">
+      </div>
 
-    <a class="nav-link" data-route="/invoices" href="#/invoices">
-      <span class="nav-ico">
-        <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
-      </span>
-      All Invoices
-    </a>
+      <div id="ocr-preview" class="hidden relative rounded-xl overflow-hidden border border-zinc-800 bg-black/60 p-2">
+        <img id="ocr-preview-img" src="" alt="Preview" class="w-full h-auto max-h-[300px] object-contain rounded-lg">
+        <button onclick="clearOcrImage()" class="absolute top-4 right-4 p-2 bg-black/80 text-white rounded-full hover:bg-rose-500 transition-colors">
+          <svg class="w-4 h-4 stroke-current fill-none" stroke-width="2" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
 
-    <a class="nav-link" data-route="/invoices/new" href="#/invoices/new">
-      <span class="nav-ico">
-        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
-      </span>
-      New Invoice
-    </a>
-
-    <div class="nav-section">Customers</div>
-
-    <a class="nav-link" data-route="/customers" href="#/customers">
-      <span class="nav-ico">
-        <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-      </span>
-      Customers
-    </a>
-
-    <a class="nav-link" data-route="/customers/new" href="#/customers/new">
-      <span class="nav-ico">
-        <svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>
-      </span>
-      New Customer
-    </a>
-
-    <div class="nav-section">Workers</div>
-
-    <a class="nav-link" href="/workers/">
-      <span class="nav-ico">
-        <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-      </span>
-      Workers
-    </a>
-
-    <a class="nav-link" href="/workers/logs/">
-      <span class="nav-ico">
-        <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-      </span>
-      Work Logs
-    </a>
-  </nav>
-
-  <div class="sidebar-footer">
-    <form action="/logout/" method="post">
-      {% csrf_token %}
-      <button type="submit" class="logout-btn">
-        <span class="nav-ico">
-          <svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-        </span>
-        Logout
+      <button id="ocr-extract-btn" onclick="runOcr()" disabled class="w-full py-3.5 bg-orange-600 hover:bg-orange-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium text-sm rounded-xl transition-all shadow-lg shadow-orange-600/20 flex items-center justify-center gap-2">
+        <svg class="w-4 h-4 stroke-current fill-none" stroke-width="2" viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+        <span>Extract Data with MaxWheel AI</span>
       </button>
-    </form>
+
+      <!-- Extracted Result Preview -->
+      <div id="ocr-step-result" class="hidden space-y-4 pt-4 border-t border-zinc-800">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-semibold text-zinc-300">Extracted Invoice Form Data</span>
+          <span id="ocr-conf-badge" class="text-[10px] font-bold px-2 py-0.5 rounded uppercase"></span>
+        </div>
+        <div id="ocr-warnings-box" class="hidden p-3 bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs rounded-xl"></div>
+        <div id="ocr-r-items" class="bg-zinc-950 p-4 rounded-xl border border-zinc-800 text-xs font-mono max-h-48 overflow-y-auto"></div>
+        
+        <button id="ocr-apply-btn" onclick="applyOcrToForm()" class="w-full py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-sm rounded-xl transition-all shadow-lg shadow-emerald-600/20">
+          Confirm & Fill Form
+        </button>
+      </div>
+    </div>
+
+    <!-- SLOT 2: AI CHATBOT DRAWER CONTENT -->
+    <div id="drawer-slot-chatbot" class="hidden flex flex-col h-full">
+      <div id="chat-messages" class="flex-1 overflow-y-auto space-y-4 pr-1 pb-4">
+        <!-- Initial Welcome Message -->
+        <div class="flex items-start gap-3">
+          <div class="w-7 h-7 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold text-xs shrink-0 border border-emerald-500/30">
+            G
+          </div>
+          <div class="bg-[#141419] border border-zinc-800/80 text-zinc-200 rounded-2xl rounded-tl-xs p-3.5 text-xs leading-relaxed max-w-[85%] shadow-sm">
+            Hello! I am your AI Business Assistant. Ask me questions like <em>"What is our revenue this month?"</em> or <em>"Who are our top 5 customers?"</em>.
+          </div>
+        </div>
+        
+        <!-- Typing Indicator -->
+        <div id="chat-typing" class="hidden flex items-start gap-3">
+          <div class="w-7 h-7 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold text-xs shrink-0 border border-emerald-500/30">G</div>
+          <div class="bg-[#141419] border border-zinc-800/80 rounded-2xl rounded-tl-xs px-4 py-3 flex items-center gap-1.5">
+            <div class="w-1.5 h-1.5 bg-zinc-500 rounded-full animate-bounce"></div>
+            <div class="w-1.5 h-1.5 bg-zinc-500 rounded-full animate-bounce" style="animation-delay: 0.15s"></div>
+            <div class="w-1.5 h-1.5 bg-zinc-500 rounded-full animate-bounce" style="animation-delay: 0.3s"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Chips & Input Footer -->
+      <div class="pt-3 border-t border-zinc-800/80 space-y-3 shrink-0">
+        <div id="chat-suggestions" class="flex gap-2 overflow-x-auto pb-1 no-scrollbar"></div>
+        <div class="relative">
+          <input type="text" id="chat-input" placeholder="Ask a question about sales, customers..." class="w-full bg-zinc-950 border border-zinc-800 rounded-xl pl-4 pr-11 py-2.5 text-xs text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/40 transition-all">
+          <button id="chat-send" onclick="sendChatMessage()" class="absolute right-1.5 top-1.5 w-7 h-7 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg flex items-center justify-center transition-colors shadow-sm">
+            <svg class="w-3.5 h-3.5 stroke-current fill-none" stroke-width="2" viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+
   </div>
 </aside>
 
-<!-- ── Main ─────────────────────────────────────────────────────────────── -->
-<div class="main-content">
-  <header class="topbar">
-    <div id="topbar-title" class="topbar-title">Dashboard</div>
-    <div class="topbar-right">
-      <span class="topbar-badge">MaxWheel Auto Services</span>
+<!-- Floating Action Button for AI Chat -->
+<button id="chat-fab" onclick="DrawerManager.open('chatbot')" class="fixed bottom-20 lg:bottom-8 right-6 lg:right-8 w-13 h-13 bg-emerald-600 rounded-full shadow-[0_8px_25px_rgba(16,185,129,0.3)] flex items-center justify-center text-white hover:bg-emerald-500 hover:scale-105 transition-all z-30 group ring-4 ring-[#0A0A0B]">
+  <svg class="w-6 h-6 stroke-current fill-none" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+  <span class="absolute right-full mr-3 bg-zinc-800 text-zinc-200 text-xs px-3 py-1.5 rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none font-medium shadow-xl border border-zinc-700">Ask AI Assistant</span>
+</button>
+
+<!-- Inline Modal: Quick Customer Creation -->
+<div id="inline-cust-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+  <div class="card-elevation w-full max-w-md p-6 space-y-4 shadow-2xl relative">
+    <div class="flex items-center justify-between border-b border-zinc-800 pb-3">
+      <h3 class="text-sm font-bold text-white flex items-center gap-2">
+        <svg class="w-4 h-4 text-orange-400 stroke-current fill-none" stroke-width="2" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>
+        Register New Customer
+      </h3>
+      <button onclick="closeInlineCustomerModal()" class="p-1.5 text-zinc-400 hover:text-white rounded-lg hover:bg-zinc-800 transition-colors">
+        <svg class="w-4 h-4 stroke-current fill-none" stroke-width="2" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
     </div>
-  </header>
+    
+    <div class="space-y-3">
+      <div>
+        <label class="block text-[10px] font-bold uppercase text-zinc-400 mb-1">Customer Name *</label>
+        <input type="text" id="quick-cust-name" placeholder="Full Name" class="w-full bg-[#09090B] border border-zinc-800 rounded-xl px-3 py-2 text-xs text-zinc-100 focus:border-orange-500 focus:outline-none">
+      </div>
+      <div>
+        <label class="block text-[10px] font-bold uppercase text-zinc-400 mb-1">Mobile Number</label>
+        <input type="text" id="quick-cust-mobile" placeholder="10-digit phone number" class="w-full bg-[#09090B] border border-zinc-800 rounded-xl px-3 py-2 text-xs text-zinc-100 font-mono focus:border-orange-500 focus:outline-none">
+      </div>
+      <div>
+        <label class="block text-[10px] font-bold uppercase text-zinc-400 mb-1">Address / Location</label>
+        <input type="text" id="quick-cust-address" placeholder="City or Workshop Address" class="w-full bg-[#09090B] border border-zinc-800 rounded-xl px-3 py-2 text-xs text-zinc-100 focus:border-orange-500 focus:outline-none">
+      </div>
+    </div>
 
-  <main class="content-area" id="content">
-    <div class="page-loading"><div class="spin"></div></div>
-  </main>
+    <div class="flex items-center justify-end gap-3 pt-3 border-t border-zinc-800">
+      <button onclick="closeInlineCustomerModal()" class="px-4 py-2 bg-zinc-900 text-zinc-300 border border-zinc-800 hover:bg-zinc-800 rounded-xl text-xs font-medium">Cancel</button>
+      <button id="quick-cust-save-btn" onclick="saveInlineCustomer()" class="px-4 py-2 bg-orange-600 hover:bg-orange-500 text-white rounded-xl text-xs font-semibold shadow-md">Save & Select</button>
+    </div>
+  </div>
 </div>
 
+<!-- Inline Modal: Quick Work Log Creation -->
+<div id="modal-quick-worklog" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+  <div class="card-elevation w-full max-w-md p-6 space-y-4 shadow-2xl relative">
+    <div class="flex items-center justify-between border-b border-zinc-800 pb-3">
+      <h3 class="text-sm font-bold text-white flex items-center gap-2">
+        <svg class="w-4 h-4 text-orange-400 stroke-current fill-none" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        Log Work Entry
+      </h3>
+      <button onclick="closeQuickWorkLogModal()" class="p-1.5 text-zinc-400 hover:text-white rounded-lg hover:bg-zinc-800 transition-colors">
+        <svg class="w-4 h-4 stroke-current fill-none" stroke-width="2" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    
+    <div class="space-y-3">
+      <div>
+        <label class="block text-[10px] font-bold uppercase text-zinc-400 mb-1">Select Worker *</label>
+        <select id="quick-log-worker" required class="w-full bg-[#09090B] border border-zinc-800 rounded-xl px-3 py-2 text-xs text-zinc-100 focus:border-orange-500 focus:outline-none">
+          <option value="">— Select Worker —</option>
+        </select>
+      </div>
+
+      <div>
+        <label class="block text-[10px] font-bold uppercase text-zinc-400 mb-1">Date * (Defaults to Today)</label>
+        <input type="date" id="quick-log-date" required class="w-full bg-[#09090B] border border-zinc-800 rounded-xl px-3 py-2 text-xs text-zinc-100 font-mono focus:border-orange-500 focus:outline-none">
+      </div>
+
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block text-[10px] font-bold uppercase text-zinc-400 mb-1">Car Number</label>
+          <input type="text" id="quick-log-car-no" placeholder="e.g. GJ01AB1234" class="w-full bg-[#09090B] border border-zinc-800 rounded-xl px-3 py-2 text-xs text-zinc-100 font-mono focus:border-orange-500 focus:outline-none">
+        </div>
+        <div>
+          <label class="block text-[10px] font-bold uppercase text-zinc-400 mb-1">Car Model</label>
+          <input type="text" id="quick-log-car-model" placeholder="e.g. Swift" class="w-full bg-[#09090B] border border-zinc-800 rounded-xl px-3 py-2 text-xs text-zinc-100 focus:border-orange-500 focus:outline-none">
+        </div>
+      </div>
+
+      <div>
+        <label class="block text-[10px] font-bold uppercase text-zinc-400 mb-1">Work Description *</label>
+        <textarea id="quick-log-desc" rows="2" placeholder="e.g. Engine oil replacement & brake cleaning" required class="w-full bg-[#09090B] border border-zinc-800 rounded-xl px-3 py-2 text-xs text-zinc-100 focus:border-orange-500 focus:outline-none"></textarea>
+      </div>
+
+      <div>
+        <label class="block text-[10px] font-bold uppercase text-zinc-400 mb-1">Wages Amount (₹)</label>
+        <input type="number" id="quick-log-wages" step="0.01" min="0" placeholder="0.00" class="w-full bg-[#09090B] border border-zinc-800 rounded-xl px-3 py-2 text-xs text-zinc-100 font-mono tabular-nums focus:border-orange-500 focus:outline-none">
+      </div>
+    </div>
+
+    <div class="flex items-center justify-end gap-3 pt-3 border-t border-zinc-800">
+      <button onclick="closeQuickWorkLogModal()" class="px-4 py-2 bg-zinc-900 text-zinc-300 border border-zinc-800 hover:bg-zinc-800 rounded-xl text-xs font-medium">Cancel</button>
+      <button id="quick-log-save-btn" onclick="saveQuickWorkLog()" class="px-4 py-2 bg-orange-600 hover:bg-orange-500 text-white rounded-xl text-xs font-semibold shadow-md">Save Work Log</button>
+    </div>
+  </div>
 </div>
+
 {% endif %}
 
-<!-- Toast -->
-<div id="toast"></div>
+<!-- Toast Notification Container -->
+<div id="toast-container"></div>
 
 <script>
 /* ═══════════════════════════════════════════════════════════════════════════
-   MaxWheel Billing — SPA
-   Routes: #/dashboard  #/invoices  #/invoices/new
-           #/invoices/:id  #/invoices/:id/edit
-           #/customers  #/customers/new  #/customers/:id/edit
-   API:    /api/invoices/   /api/customers/   /api/invoices/dashboard/
-           /api/invoices/next-number/
+   MaxWheel Billing — SPA Core Architecture
+   Design System: Stripe / Linear Inspired Dark Aesthetic (Electric Orange Palette)
 ══════════════════════════════════════════════════════════════════════════ */
 
-/* ── Utils ─────────────────────────────────────────────────────────────── */
-const fmt  = n => '\u20b9' + Number(n).toFixed(2);
-const fmtK = n => '\u20b9' + Number(n).toLocaleString('en-IN', {maximumFractionDigits: 0});
+/* ── Formatting & Utility Helpers ────────────────────────────────────────── */
+const fmt  = n => '₹' + Number(n || 0).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+const fmtK = n => '₹' + Number(n || 0).toLocaleString('en-IN', {maximumFractionDigits: 0});
 
 function fmtDate(d) {
-  if (!d) return '\u2014';
+  if (!d) return '—';
   const [y, m, day] = d.split('-');
   const M = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  return `${parseInt(day)} ${M[parseInt(m)-1]} ${y}`;
+  return `${parseInt(day,10)} ${M[parseInt(m,10)-1]} ${y}`;
 }
 
 function todayISO() {
   return new Date().toISOString().slice(0, 10);
 }
 
-/* ── CSRF ──────────────────────────────────────────────────────────────── */
 function csrf() {
   const m = document.cookie.match(/csrftoken=([^;]+)/);
   return m ? m[1] : '';
 }
 
-/* ── API fetch wrapper ─────────────────────────────────────────────────── */
 async function api(method, url, body) {
   const opts = {
     method,
@@ -267,21 +590,122 @@ async function api(method, url, body) {
   return data;
 }
 
-/* ── Toast ─────────────────────────────────────────────────────────────── */
-let _toastTimer;
-function toast(msg, type) {
-  const el = document.getElementById('toast');
-  el.textContent = msg;
-  el.className = 'show ' + (type === 'error' ? 'err' : 'ok');
-  clearTimeout(_toastTimer);
-  _toastTimer = setTimeout(() => { el.className = ''; }, 3500);
+/* ── Toast Notifications ─────────────────────────────────────────────────── */
+function toast(msg, type = 'ok', duration = 3500) {
+  const container = document.getElementById('toast-container');
+  if (!container) return;
+  
+  const card = document.createElement('div');
+  card.className = `toast-card ${type}`;
+  
+  let iconSvg = `<svg class="w-4 h-4 shrink-0 stroke-current fill-none text-orange-400" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>`;
+  if (type === 'success') {
+    iconSvg = `<svg class="w-4 h-4 shrink-0 stroke-current fill-none text-emerald-400" stroke-width="2" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>`;
+  } else if (type === 'err') {
+    iconSvg = `<svg class="w-4 h-4 shrink-0 stroke-current fill-none text-rose-400" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>`;
+  }
+
+  card.innerHTML = `${iconSvg}<span>${msg}</span>`;
+  container.appendChild(card);
+  
+  setTimeout(() => card.classList.add('show'), 10);
+  setTimeout(() => {
+    card.classList.remove('show');
+    setTimeout(() => card.remove(), 250);
+  }, duration);
 }
 
-/* ── Navigation ────────────────────────────────────────────────────────── */
 function go(path) { location.hash = path; }
 window.go = go;
 
-/* ── Router ────────────────────────────────────────────────────────────── */
+/* ── Standardized Drawer Manager ─────────────────────────────────────────── */
+const DrawerManager = {
+  activeSlot: null,
+  
+  open(slotName) {
+    const backdrop = document.getElementById('drawer-backdrop');
+    const container = document.getElementById('drawer-container');
+    const titleEl = document.getElementById('drawer-title');
+    const subtitleEl = document.getElementById('drawer-subtitle');
+    const iconBox = document.getElementById('drawer-icon-box');
+
+    // Hide all slot contents
+    document.querySelectorAll('[id^="drawer-slot-"]').forEach(el => el.classList.add('hidden'));
+
+    if (slotName === 'scanner') {
+      titleEl.textContent = 'AI Invoice Scanner';
+      subtitleEl.textContent = 'Handwritten photo OCR parser';
+      iconBox.className = 'w-8 h-8 rounded-xl bg-orange-500/10 text-orange-400 flex items-center justify-center border border-orange-500/20';
+      iconBox.innerHTML = `<svg class="w-4 h-4 stroke-current fill-none" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="12" cy="12" r="3"/></svg>`;
+      document.getElementById('drawer-slot-scanner')?.classList.remove('hidden');
+    } else if (slotName === 'chatbot') {
+      titleEl.textContent = 'AI Assistant';
+      subtitleEl.textContent = 'Business analytics & queries';
+      iconBox.className = 'w-8 h-8 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center border border-emerald-500/20';
+      iconBox.innerHTML = `<svg class="w-4 h-4 stroke-current fill-none" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>`;
+      document.getElementById('drawer-slot-chatbot')?.classList.remove('hidden');
+      setTimeout(() => document.getElementById('chat-input')?.focus(), 150);
+    }
+
+    backdrop.classList.remove('hidden');
+    container.classList.remove('translate-x-full');
+    this.activeSlot = slotName;
+    container.focus();
+  },
+
+  close() {
+    const backdrop = document.getElementById('drawer-backdrop');
+    const container = document.getElementById('drawer-container');
+    container.classList.add('translate-x-full');
+    setTimeout(() => backdrop.classList.add('hidden'), 200);
+    this.activeSlot = null;
+  }
+};
+window.DrawerManager = DrawerManager;
+
+// Global Escape Key Listener for drawers
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && DrawerManager.activeSlot) {
+    DrawerManager.close();
+  }
+});
+
+function toggleMobileSidebar(show) {
+  const sidebar = document.getElementById('sidebar');
+  const backdrop = document.getElementById('sidebar-backdrop');
+  if (show) {
+    sidebar.classList.remove('hidden');
+    backdrop.classList.remove('hidden');
+  } else {
+    sidebar.classList.add('hidden');
+    backdrop.classList.add('hidden');
+  }
+}
+
+function toggleSidebarCollapse() {
+  const sidebar = document.getElementById('sidebar');
+  if (!sidebar) return;
+  sidebar.classList.toggle('sidebar-collapsed');
+  const isCollapsed = sidebar.classList.contains('sidebar-collapsed');
+  localStorage.setItem('sidebar_collapsed', isCollapsed ? 'true' : 'false');
+}
+
+// Restore saved sidebar collapse state on page load
+document.addEventListener('DOMContentLoaded', () => {
+  if (localStorage.getItem('sidebar_collapsed') === 'true') {
+    document.getElementById('sidebar')?.classList.add('sidebar-collapsed');
+  }
+});
+
+// Keyboard shortcut Ctrl+B or Cmd+B to toggle sidebar collapse
+document.addEventListener('keydown', (e) => {
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'b') {
+    e.preventDefault();
+    toggleSidebarCollapse();
+  }
+});
+
+/* ── SPA Hash Router ─────────────────────────────────────────────────────── */
 const ROUTES = [
   [/^\/?$|^\/dashboard\/?$/, () => pgDashboard()],
   [/^\/invoices\/?$/, () => pgInvoiceList()],
@@ -291,33 +715,66 @@ const ROUTES = [
   [/^\/customers\/?$/, () => pgCustomerList()],
   [/^\/customers\/new\/?$/, () => pgCustomerForm(null)],
   [/^\/customers\/(\d+)\/edit\/?$/, m => pgCustomerForm(m[1])],
+  [/^\/customers\/(\d+)\/?$/, m => pgCustomerDetail(m[1])],
+  [/^\/workers\/?$/, () => pgWorkerList()],
+  [/^\/workers\/new\/?$/, () => pgWorkerForm(null)],
+  [/^\/workers\/(\d+)\/edit\/?$/, m => pgWorkerForm(m[1])],
+  [/^\/workers\/(\d+)\/?$/, m => pgWorkerDetail(m[1])],
+  [/^\/workers\/logs\/?$/, () => pgWorkLogList()],
+  [/^\/workers\/logs\/new\/?$/, () => pgWorkLogForm(null)],
+  [/^\/workers\/logs\/(\d+)\/edit\/?$/, m => pgWorkLogForm(m[1])],
 ];
 
 let _chartInst = null;
+let _draftInvoiceFromOcr = null;
 
 async function route() {
-  // If hash is empty but pathname is not root, set hash to pathname so SPA router loads correct view
   if (!location.hash && location.pathname !== '/') {
     location.hash = location.pathname;
     return;
   }
-
-  // Normalize: strip hash prefix and trailing slashes
   let path = location.hash.replace(/^#/, '') || '/';
   if (path !== '/' && path.endsWith('/')) path = path.slice(0, -1);
 
-  // Destroy previous chart instance to prevent canvas reuse error
   if (_chartInst) { _chartInst.destroy(); _chartInst = null; }
 
-  // Highlight active nav links
+  // Update nav link active states with Orange theme
   document.querySelectorAll('.nav-link[data-route]').forEach(a => {
     const r = a.dataset.route;
-    a.classList.toggle('active', path === r || (r !== '/dashboard' && path.startsWith(r) && r !== '/invoices/new' && r !== '/customers/new') || (r === '/dashboard' && (path === '/' || path === '/dashboard')));
+    const isActive = path === r || (r !== '/dashboard' && path.startsWith(r) && r !== '/invoices/new' && r !== '/customers/new') || (r === '/dashboard' && (path === '/' || path === '/dashboard'));
+    if (isActive) {
+      a.className = 'nav-link flex items-center gap-3 px-3 py-2.5 bg-orange-500/15 border border-orange-500/30 text-orange-400 rounded-xl transition-all group font-semibold text-sm shadow-sm';
+    } else {
+      a.className = 'nav-link flex items-center gap-3 px-3 py-2.5 text-zinc-400 hover:text-white hover:bg-zinc-800/60 rounded-xl transition-all group font-medium text-sm';
+    }
+  // Update bottom nav active states
+  document.querySelectorAll('.bn-item[data-bn]').forEach(a => {
+    const r = a.dataset.bn;
+    const isActive = path === r || (r !== '/dashboard' && path.startsWith(r));
+    if (isActive) {
+      a.className = 'bn-item flex flex-col items-center justify-center w-full h-full text-orange-400 font-semibold transition-colors';
+    } else {
+      a.className = 'bn-item flex flex-col items-center justify-center w-full h-full text-zinc-500 hover:text-zinc-200 transition-colors';
+    }
   });
 
-  // Show spinner
+  const topTitle = document.getElementById('topbar-title');
+  if (topTitle) {
+    if (path.startsWith('/invoices')) topTitle.textContent = 'Invoices';
+    else if (path.startsWith('/customers')) topTitle.textContent = 'Customers';
+    else if (path.startsWith('/workers/logs')) topTitle.textContent = 'Daily Work Logs';
+    else if (path.startsWith('/workers')) topTitle.textContent = 'Workers Directory';
+    else topTitle.textContent = 'Dashboard';
+  }
+
   const el = document.getElementById('content');
-  el.innerHTML = '<div class="page-loading"><div class="spin"></div></div>';
+  if (el) {
+    el.innerHTML = `
+      <div class="flex flex-col items-center justify-center min-h-[300px] gap-3 text-zinc-500">
+        <div class="w-8 h-8 border-2 border-orange-500/30 border-t-orange-500 rounded-full animate-spin"></div>
+        <span class="text-xs font-medium tracking-wide text-zinc-400">Loading view...</span>
+      </div>`;
+  }
 
   for (const [re, fn] of ROUTES) {
     const m = path.match(re);
@@ -325,95 +782,407 @@ async function route() {
       try { await fn(m); }
       catch (e) {
         console.error(e);
-        let msg = 'Something went wrong.';
+        let msg = 'An unexpected error occurred while loading this view.';
         if (e && e.detail) msg = e.detail;
-        else if (e && typeof e === 'object') {
-          try { msg = Object.values(e).flat().join(' '); } catch(_) {}
+        if (el) {
+          el.innerHTML = `
+            <div class="flex flex-col items-center justify-center min-h-[300px] gap-4 p-8 card-elevation text-center max-w-md mx-auto my-12">
+              <div class="w-12 h-12 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-400 flex items-center justify-center">
+                <svg class="w-6 h-6 stroke-current fill-none" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+              </div>
+              <div>
+                <h3 class="text-base font-semibold text-zinc-100">Failed to load content</h3>
+                <p class="text-xs text-zinc-400 mt-1">${msg}</p>
+              </div>
+              <button onclick="route()" class="px-4 py-2 bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-xs font-medium text-zinc-200 rounded-xl transition-all">
+                Try Again
+              </button>
+            </div>`;
         }
-        el.innerHTML = `<div class="empty-state"><h2>Error</h2><p>${msg}</p></div>`;
-        toast(msg, 'error');
+        toast(msg, 'err');
       }
       return;
     }
   }
-  el.innerHTML = '<div class="empty-state"><h2>404</h2><p>Page not found.</p></div>';
-}
 
+  if (el) {
+    el.innerHTML = `
+      <div class="flex flex-col items-center justify-center min-h-[300px] gap-3 text-center py-16">
+        <h2 class="text-2xl font-bold text-zinc-200">404 — Page Not Found</h2>
+        <p class="text-xs text-zinc-500">The route hash "${path}" does not exist.</p>
+        <button onclick="go('/dashboard')" class="mt-2 px-4 py-2 bg-orange-600 text-white rounded-xl text-xs font-medium">Return to Dashboard</button>
+      </div>`;
+  }
+}
 window.addEventListener('hashchange', route);
 window.addEventListener('DOMContentLoaded', route);
 
+
 /* ══════════════════════════════════════════════════════════════════════════
-   PAGES
+   SCREEN 1: INVOICE LIST & DASHBOARD
 ══════════════════════════════════════════════════════════════════════════ */
 
-/* ── Dashboard ─────────────────────────────────────────────────────────── */
+let _invoiceListSortCol = 'date';
+let _invoiceListSortOrder = 'desc';
+let _invoiceListFilterStatus = 'all';
+
+async function pgInvoiceList() {
+  const el = document.getElementById('content');
+  renderInvoiceListSkeleton(el);
+
+  try {
+    const qParam = new URLSearchParams(location.search).get('q') || '';
+    const invoices = await api('GET', qParam ? `/api/invoices/?q=${encodeURIComponent(qParam)}` : '/api/invoices/');
+    renderInvoiceListScreen(el, invoices, qParam);
+  } catch (err) {
+    renderInvoiceListError(el, err);
+  }
+}
+
+function renderInvoiceListSkeleton(container) {
+  container.innerHTML = `
+    <div class="space-y-6">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div class="space-y-2">
+          <div class="h-8 w-44 bg-zinc-800/80 rounded-xl skeleton-pulse"></div>
+          <div class="h-4 w-28 bg-zinc-900 rounded-lg skeleton-pulse"></div>
+        </div>
+        <div class="flex gap-3">
+          <div class="h-10 w-32 bg-zinc-800/80 rounded-xl skeleton-pulse"></div>
+          <div class="h-10 w-36 bg-orange-600/30 rounded-xl skeleton-pulse"></div>
+        </div>
+      </div>
+      <div class="grid grid-cols-1 sm:grid-cols-4 gap-4">
+        ${[1, 2, 3, 4].map(() => `
+          <div class="card-elevation p-5 space-y-3">
+            <div class="h-3 w-20 bg-zinc-800 rounded skeleton-pulse"></div>
+            <div class="h-7 w-28 bg-zinc-800/80 rounded-lg skeleton-pulse"></div>
+          </div>
+        `).join('')}
+      </div>
+      <div class="card-elevation overflow-hidden">
+        <div class="p-4 border-b border-zinc-800 bg-[#0E0E11] flex gap-3">
+          <div class="h-10 flex-1 bg-zinc-900 rounded-xl skeleton-pulse"></div>
+          <div class="h-10 w-36 bg-zinc-900 rounded-xl skeleton-pulse"></div>
+        </div>
+        <div class="p-6 space-y-4">
+          ${[1, 2, 3, 4, 5].map(() => `
+            <div class="flex items-center justify-between gap-4 py-2 border-b border-zinc-800/40">
+              <div class="h-4 w-24 bg-zinc-800 rounded skeleton-pulse"></div>
+              <div class="h-4 w-20 bg-zinc-900 rounded skeleton-pulse"></div>
+              <div class="h-4 w-32 bg-zinc-800 rounded skeleton-pulse"></div>
+              <div class="h-4 w-24 bg-zinc-900 rounded skeleton-pulse"></div>
+              <div class="h-4 w-16 bg-zinc-800 rounded skeleton-pulse"></div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    </div>`;
+}
+
+function renderInvoiceListError(container, err) {
+  container.innerHTML = `
+    <div class="card-elevation p-8 max-w-lg mx-auto my-12 text-center space-y-4">
+      <div class="w-12 h-12 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-400 flex items-center justify-center mx-auto">
+        <svg class="w-6 h-6 stroke-current fill-none" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      </div>
+      <div>
+        <h3 class="text-base font-semibold text-zinc-100">Unable to load Invoices</h3>
+        <p class="text-xs text-zinc-400 mt-1">${err?.detail || err?.message || 'Server connection failed. Please check your network.'}</p>
+      </div>
+      <button onclick="pgInvoiceList()" class="px-5 py-2.5 bg-orange-600 hover:bg-orange-500 text-white rounded-xl text-xs font-medium transition-all shadow-lg shadow-orange-600/20">
+        Retry Loading
+      </button>
+    </div>`;
+}
+
+function renderInvoiceListScreen(container, invoices, searchQuery) {
+  const totalRevenue = invoices.reduce((acc, i) => acc + parseFloat(i.total || 0), 0);
+  const totalCount = invoices.length;
+  const paidInvoices = invoices.filter(i => (i.status || 'paid').toLowerCase() === 'paid');
+  const pendingInvoices = invoices.filter(i => (i.status || '').toLowerCase() === 'pending');
+
+  let filtered = [...invoices];
+  if (_invoiceListFilterStatus !== 'all') {
+    filtered = filtered.filter(i => (i.status || 'paid').toLowerCase() === _invoiceListFilterStatus);
+  }
+
+  filtered.sort((a, b) => {
+    let valA = a[_invoiceListSortCol];
+    let valB = b[_invoiceListSortCol];
+    if (_invoiceListSortCol === 'total') {
+      valA = parseFloat(valA || 0);
+      valB = parseFloat(valB || 0);
+    } else if (_invoiceListSortCol === 'date') {
+      valA = a.invoice_date || '';
+      valB = b.invoice_date || '';
+    } else if (_invoiceListSortCol === 'customer') {
+      valA = (a.customer_name || '').toLowerCase();
+      valB = (b.customer_name || '').toLowerCase();
+    }
+    if (valA < valB) return _invoiceListSortOrder === 'asc' ? -1 : 1;
+    if (valA > valB) return _invoiceListSortOrder === 'asc' ? 1 : -1;
+    return 0;
+  });
+
+  container.innerHTML = `
+    <div class="space-y-6">
+      
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 class="text-2xl font-bold text-white tracking-tight">Invoices</h1>
+          <p class="text-xs text-zinc-400 mt-1">Manage and track billing records for auto services</p>
+        </div>
+        <div class="flex items-center gap-3">
+          <button onclick="DrawerManager.open('scanner')" class="px-4 py-2.5 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 hover:border-orange-500/40 text-xs text-zinc-200 rounded-xl font-medium transition-all flex items-center gap-2">
+            <svg class="w-4 h-4 text-orange-400 stroke-current fill-none" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="12" cy="12" r="3"/></svg>
+            <span>Scan Invoice</span>
+          </button>
+          <button onclick="go('/invoices/new')" class="px-4 py-2.5 bg-orange-600 hover:bg-orange-500 text-white rounded-xl text-xs font-semibold shadow-lg shadow-orange-600/20 flex items-center gap-2 transition-all active:scale-95">
+            <svg class="w-4 h-4 stroke-current fill-none" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            <span>New Invoice</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="card-elevation p-4 flex flex-col justify-between">
+          <span class="text-[10px] font-bold uppercase tracking-wider text-zinc-400">Total Revenue</span>
+          <span class="text-xl font-bold text-white font-mono tabular-nums mt-2">${fmtK(totalRevenue)}</span>
+        </div>
+        <div class="card-elevation p-4 flex flex-col justify-between">
+          <span class="text-[10px] font-bold uppercase tracking-wider text-zinc-400">Invoices Count</span>
+          <span class="text-xl font-bold text-zinc-100 tabular-nums mt-2">${totalCount}</span>
+        </div>
+        <div class="card-elevation p-4 flex flex-col justify-between">
+          <span class="text-[10px] font-bold uppercase tracking-wider text-emerald-400">Paid Invoices</span>
+          <span class="text-xl font-bold text-emerald-400 tabular-nums mt-2">${paidInvoices.length}</span>
+        </div>
+        <div class="card-elevation p-4 flex flex-col justify-between">
+          <span class="text-[10px] font-bold uppercase tracking-wider text-amber-400">Pending / Draft</span>
+          <span class="text-xl font-bold text-amber-400 tabular-nums mt-2">${pendingInvoices.length}</span>
+        </div>
+      </div>
+
+      <div class="card-elevation p-4 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+        <div class="relative flex-1">
+          <svg class="w-4 h-4 text-zinc-500 absolute left-3.5 top-1/2 -translate-y-1/2 stroke-current fill-none" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input id="inv-search-input" value="${searchQuery}" placeholder="Search by invoice #, customer, car model..." class="w-full bg-[#09090B] border border-zinc-800 rounded-xl pl-10 pr-4 py-2 text-xs text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500/40 transition-all">
+        </div>
+
+        <div class="flex items-center gap-2">
+          <select id="inv-status-filter" onchange="handleInvoiceStatusFilter(this.value)" class="bg-[#09090B] border border-zinc-800 rounded-xl px-3 py-2 text-xs text-zinc-200 focus:outline-none focus:border-orange-500 transition-all cursor-pointer">
+            <option value="all"${_invoiceListFilterStatus === 'all' ? ' selected' : ''}>All Statuses</option>
+            <option value="paid"${_invoiceListFilterStatus === 'paid' ? ' selected' : ''}>Paid Only</option>
+            <option value="pending"${_invoiceListFilterStatus === 'pending' ? ' selected' : ''}>Pending Only</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="card-elevation overflow-hidden">
+        ${filtered.length === 0 ? `
+          <div class="p-12 flex flex-col items-center justify-center text-center space-y-4">
+            <div class="w-16 h-16 rounded-2xl bg-zinc-900 border border-zinc-800 text-zinc-500 flex items-center justify-center">
+              <svg class="w-8 h-8 stroke-current fill-none" stroke-width="1.5" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="11" x2="12" y2="17"/><line x1="9" y1="14" x2="15" y2="14"/></svg>
+            </div>
+            <div>
+              <h3 class="text-sm font-semibold text-zinc-200">No invoices found</h3>
+              <p class="text-xs text-zinc-500 mt-1 max-w-sm">No billing records match your query or filter criteria. Create a new invoice or scan a handwritten photo sheet.</p>
+            </div>
+            <div class="flex items-center gap-3 pt-2">
+              <button onclick="go('/invoices/new')" class="px-4 py-2 bg-orange-600 hover:bg-orange-500 text-white rounded-xl text-xs font-semibold shadow-md transition-all">
+                + Create Invoice
+              </button>
+              <button onclick="DrawerManager.open('scanner')" class="px-4 py-2 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 border border-zinc-800 rounded-xl text-xs font-medium transition-all">
+                📷 Scan Photo
+              </button>
+            </div>
+          </div>
+        ` : `
+          <div class="overflow-x-auto max-h-[600px] overflow-y-auto">
+            <table class="w-full text-left border-collapse">
+              <thead class="sticky top-0 z-10 bg-[#0E0E11]/95 backdrop-blur-md border-b border-zinc-800 text-[10px] uppercase font-bold tracking-wider text-zinc-400">
+                <tr>
+                  <th class="py-3.5 pl-6 pr-4 cursor-pointer hover:text-white transition-colors" onclick="toggleSortColumn('invoice_number')">
+                    Invoice # ${_invoiceListSortCol === 'invoice_number' ? (_invoiceListSortOrder === 'asc' ? '↑' : '↓') : ''}
+                  </th>
+                  <th class="py-3.5 px-4 cursor-pointer hover:text-white transition-colors" onclick="toggleSortColumn('date')">
+                    Date ${_invoiceListSortCol === 'date' ? (_invoiceListSortOrder === 'asc' ? '↑' : '↓') : ''}
+                  </th>
+                  <th class="py-3.5 px-4 cursor-pointer hover:text-white transition-colors" onclick="toggleSortColumn('customer')">
+                    Customer ${_invoiceListSortCol === 'customer' ? (_invoiceListSortOrder === 'asc' ? '↑' : '↓') : ''}
+                  </th>
+                  <th class="py-3.5 px-4">Vehicle</th>
+                  <th class="py-3.5 px-4 text-center">Status</th>
+                  <th class="py-3.5 px-4 text-center">WhatsApp</th>
+                  <th class="py-3.5 px-4 text-right cursor-pointer hover:text-white transition-colors" onclick="toggleSortColumn('total')">
+                    Total Amount ${_invoiceListSortCol === 'total' ? (_invoiceListSortOrder === 'asc' ? '↑' : '↓') : ''}
+                  </th>
+                  <th class="py-3.5 pr-6 pl-4 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-zinc-800/40 text-xs">
+                ${filtered.map(inv => {
+                  const statusName = (inv.status || 'paid').toLowerCase();
+                  const isPaid = statusName === 'paid';
+                  
+                  const statusBadgeHtml = isPaid
+                    ? `<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"><span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>Paid</span>`
+                    : `<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20"><span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span>Pending</span>`;
+
+                  const smsBadgeHtml = `<span class="inline-flex items-center gap-1 text-[10px] font-medium text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20"><svg class="w-3 h-3 stroke-current fill-none" stroke-width="2" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg> Sent</span>`;
+
+                  return `
+                    <tr class="table-row-hover cursor-pointer" onclick="go('/invoices/${inv.id}')">
+                      <td class="py-4 pl-6 pr-4 font-mono font-bold text-orange-400 hover:underline">
+                        ${inv.invoice_number}
+                      </td>
+                      <td class="py-4 px-4 text-zinc-400 font-medium tabular-nums">
+                        ${fmtDate(inv.invoice_date)}
+                      </td>
+                      <td class="py-4 px-4">
+                        <div class="font-semibold text-zinc-200">${inv.customer_name}</div>
+                        ${inv.customer_mobile ? `<div class="text-[10px] text-zinc-500 font-mono">${inv.customer_mobile}</div>` : ''}
+                      </td>
+                      <td class="py-4 px-4 text-zinc-300">
+                        ${[inv.car_number, inv.car_model].filter(Boolean).join(' · ') || '—'}
+                      </td>
+                      <td class="py-4 px-4 text-center">
+                        ${statusBadgeHtml}
+                      </td>
+                      <td class="py-4 px-4 text-center">
+                        ${smsBadgeHtml}
+                      </td>
+                      <td class="py-4 px-4 text-right font-mono font-bold text-zinc-100 tabular-nums text-sm">
+                        ${fmt(inv.total)}
+                      </td>
+                      <td class="py-4 pr-6 pl-4 text-right" onclick="event.stopPropagation()">
+                        <div class="flex items-center justify-end gap-1">
+                          <button onclick="go('/invoices/${inv.id}')" class="p-1.5 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-lg transition-colors" title="View Detail">
+                            <svg class="w-4 h-4 stroke-current fill-none" stroke-width="2" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                          </button>
+                          <button onclick="go('/invoices/${inv.id}/edit')" class="p-1.5 text-zinc-400 hover:text-orange-400 hover:bg-orange-500/10 rounded-lg transition-colors" title="Edit Invoice">
+                            <svg class="w-4 h-4 stroke-current fill-none" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                          </button>
+                          <a href="/invoices/${inv.id}/print/" target="_blank" class="p-1.5 text-zinc-400 hover:text-emerald-400 hover:bg-emerald-500/10 rounded-lg transition-colors" title="Print PDF">
+                            <svg class="w-4 h-4 stroke-current fill-none" stroke-width="2" viewBox="0 0 24 24"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+                          </a>
+                        </div>
+                      </td>
+                    </tr>
+                  `;
+                }).join('')}
+              </tbody>
+            </table>
+          </div>
+        `}
+      </div>
+    </div>`;
+
+  let searchTimer;
+  document.getElementById('inv-search-input')?.addEventListener('input', e => {
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(() => {
+      pgInvoiceList();
+    }, 300);
+  });
+}
+
+function handleInvoiceStatusFilter(val) {
+  _invoiceListFilterStatus = val;
+  pgInvoiceList();
+}
+
+function toggleSortColumn(col) {
+  if (_invoiceListSortCol === col) {
+    _invoiceListSortOrder = _invoiceListSortOrder === 'asc' ? 'desc' : 'asc';
+  } else {
+    _invoiceListSortCol = col;
+    _invoiceListSortOrder = 'desc';
+  }
+  pgInvoiceList();
+}
+
+
+/* ── DASHBOARD VIEW ──────────────────────────────────────────────────────── */
 async function pgDashboard() {
   const d = await api('GET', '/api/invoices/dashboard/');
   const el = document.getElementById('content');
 
   el.innerHTML = `
-    <div class="page-header">
-      <div>
-        <h1>Dashboard</h1>
-        <div class="sub">FY ${d.fy_label} &nbsp;&middot;&nbsp; Overview</div>
-      </div>
-      <div class="page-header-actions">
-        <button class="btn btn-primary" onclick="go('/invoices/new')">
-          <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          New Invoice
+    <div class="space-y-6">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 class="text-2xl font-bold text-white tracking-tight">Dashboard Overview</h1>
+          <p class="text-xs text-zinc-400 mt-1">Financial summary for FY ${d.fy_label}</p>
+        </div>
+        <button onclick="go('/invoices/new')" class="px-4 py-2.5 bg-orange-600 hover:bg-orange-500 text-white rounded-xl text-xs font-semibold shadow-lg shadow-orange-600/20 flex items-center justify-center gap-2 transition-all">
+          <svg class="w-4 h-4 stroke-current fill-none" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          <span>New Invoice</span>
         </button>
       </div>
-    </div>
 
-    <div class="stats-grid">
-      <div class="stat-card">
-        <div class="stat-label">FY Revenue</div>
-        <div class="stat-value">${fmtK(d.fy_revenue)}</div>
+      <div class="card-elevation p-5 border-l-4 border-l-orange-500 relative overflow-hidden">
+        <div class="flex items-center justify-between mb-2">
+          <div class="flex items-center gap-2 text-xs font-semibold text-orange-400">
+            <svg class="w-4 h-4 stroke-current fill-none" stroke-width="2" viewBox="0 0 24 24"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+            <span>MaxWheel AI Business Narrative</span>
+          </div>
+          <span class="text-[9px] font-bold bg-orange-500/20 text-orange-300 px-2 py-0.5 rounded">LIVE</span>
+        </div>
+        <p id="ai-summary-text" class="text-xs text-zinc-300 leading-relaxed font-medium">Generating financial narrative...</p>
       </div>
-      <div class="stat-card">
-        <div class="stat-label">Total Invoices</div>
-        <div class="stat-value">${d.total_invoices}</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">Customers</div>
-        <div class="stat-value">${d.total_customers}</div>
-      </div>
-    </div>
 
-    <div class="card mb-4">
-      <div class="card-header"><span class="card-title">Monthly Revenue &mdash; FY ${d.fy_label}</span></div>
-      <div class="card-body"><canvas id="rev-chart" height="180"></canvas></div>
-    </div>
-
-    <div class="card">
-      <div class="card-header">
-        <span class="card-title">Recent Invoices</span>
-        <a href="#/invoices" class="btn btn-secondary btn-sm">View All</a>
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-5">
+        <div class="card-elevation p-6 space-y-2">
+          <span class="text-[10px] font-bold uppercase tracking-wider text-zinc-400">FY Revenue</span>
+          <div class="text-2xl font-black text-orange-400 font-mono tabular-nums">${fmtK(d.fy_revenue)}</div>
+        </div>
+        <div class="card-elevation p-6 space-y-2">
+          <span class="text-[10px] font-bold uppercase tracking-wider text-zinc-400">Total Invoices</span>
+          <div class="text-2xl font-black text-zinc-100 tabular-nums">${d.total_invoices}</div>
+        </div>
+        <div class="card-elevation p-6 space-y-2">
+          <span class="text-[10px] font-bold uppercase tracking-wider text-zinc-400">Registered Customers</span>
+          <div class="text-2xl font-black text-zinc-100 tabular-nums">${d.total_customers}</div>
+        </div>
       </div>
-      <div class="card-body" style="padding:0">
-        ${d.recent_invoices.length === 0 ? '<div class="empty-state"><p>No invoices yet.</p></div>' : `
-        <div class="table-wrap">
-          <table class="data-table">
-            <thead><tr>
-              <th>Invoice</th><th>Date</th><th>Customer</th>
-              <th>Vehicle</th><th class="text-right">Total</th>
-            </tr></thead>
-            <tbody>
+
+      <div class="card-elevation p-6 space-y-4">
+        <h3 class="text-xs font-bold text-zinc-200 uppercase tracking-wider">Monthly Revenue Trend</h3>
+        <div class="h-64"><canvas id="rev-chart"></canvas></div>
+      </div>
+
+      <div class="card-elevation overflow-hidden">
+        <div class="p-4 border-b border-zinc-800 bg-[#0E0E11] flex justify-between items-center">
+          <span class="text-xs font-bold text-zinc-200 uppercase tracking-wider">Recent Billing Transactions</span>
+          <button onclick="go('/invoices')" class="text-xs font-medium text-orange-400 hover:underline">View All Invoices →</button>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs">
+            <thead class="bg-[#0E0E11] text-[10px] uppercase font-bold text-zinc-500 border-b border-zinc-800">
+              <tr>
+                <th class="py-3 pl-6">Invoice #</th>
+                <th class="py-3">Date</th>
+                <th class="py-3">Customer</th>
+                <th class="py-3 text-right pr-6">Amount</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-zinc-800/40">
               ${d.recent_invoices.map(inv => `
-                <tr class="clickable" onclick="go('/invoices/${inv.id}')">
-                  <td class="fw-600 text-orange">${inv.invoice_number}</td>
-                  <td class="text-dim">${fmtDate(inv.invoice_date)}</td>
-                  <td>${inv.customer_name}</td>
-                  <td class="text-dim">${[inv.car_number, inv.car_model].filter(Boolean).join(' \u00b7 ') || '\u2014'}</td>
-                  <td class="text-right fw-600 text-mono">${fmt(inv.total)}</td>
-                </tr>`).join('')}
+                <tr class="table-row-hover cursor-pointer" onclick="go('/invoices/${inv.id}')">
+                  <td class="py-3 pl-6 font-mono font-bold text-orange-400">${inv.invoice_number}</td>
+                  <td class="py-3 text-zinc-400 font-mono">${fmtDate(inv.invoice_date)}</td>
+                  <td class="py-3 text-zinc-200 font-medium">${inv.customer_name}</td>
+                  <td class="py-3 text-right pr-6 font-mono font-bold text-zinc-100">${fmt(inv.total)}</td>
+                </tr>
+              `).join('')}
             </tbody>
           </table>
-        </div>`}
+        </div>
       </div>
     </div>`;
 
-  // Chart.js bar chart
   const ctx = document.getElementById('rev-chart').getContext('2d');
   _chartInst = new Chart(ctx, {
     type: 'bar',
@@ -421,671 +1190,1431 @@ async function pgDashboard() {
       labels: d.monthly_data.map(m => m.month),
       datasets: [{
         data: d.monthly_data.map(m => m.revenue),
-        backgroundColor: 'rgba(232,97,10,.65)',
-        borderColor: '#e8610a',
-        borderWidth: 1,
-        borderRadius: 5,
-        hoverBackgroundColor: 'rgba(232,97,10,.9)',
+        backgroundColor: '#f97316',
+        hoverBackgroundColor: '#ea580c',
+        borderRadius: 6,
+        barThickness: 'flex',
+        maxBarThickness: 36
       }]
     },
     options: {
       responsive: true,
-      plugins: { legend: { display: false }, tooltip: {
-        callbacks: { label: ctx => ' \u20b9' + ctx.parsed.y.toLocaleString('en-IN') }
-      }},
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
       scales: {
-        y: {
-          ticks: { color: '#666', callback: v => '\u20b9' + Number(v).toLocaleString('en-IN') },
-          grid: { color: 'rgba(255,255,255,.04)' }
+        y: { 
+          beginAtZero: true,
+          border: { display: false },
+          ticks: { color: '#71717a', font: { family: 'Inter', size: 10 }, callback: v => '₹' + Number(v).toLocaleString('en-IN') }, 
+          grid: { color: '#27272a' } 
         },
-        x: { ticks: { color: '#666' }, grid: { display: false } }
+        x: { 
+          border: { display: false },
+          ticks: { color: '#71717a', font: { family: 'Inter', size: 10 } }, 
+          grid: { display: false } 
+        }
       }
     }
   });
+
+  api('GET', '/api/ocr/ai-summary/').then(s => {
+    const summaryEl = document.getElementById('ai-summary-text');
+    if (summaryEl) summaryEl.textContent = s.summary || 'No summary available.';
+  }).catch(() => {
+    const summaryEl = document.getElementById('ai-summary-text');
+    if (summaryEl) summaryEl.textContent = 'AI summary temporarily unavailable.';
+  });
 }
 
-/* ── Invoice List ──────────────────────────────────────────────────────── */
-async function pgInvoiceList(q) {
-  q = q === undefined ? (new URLSearchParams(location.search).get('q') || '') : q;
-  const url = q ? `/api/invoices/?q=${encodeURIComponent(q)}` : '/api/invoices/';
-  const invs = await api('GET', url);
-  const el = document.getElementById('content');
 
+/* ══════════════════════════════════════════════════════════════════════════
+   PHASE 2: INVOICE DETAIL & FORM VIEWS
+══════════════════════════════════════════════════════════════════════════ */
+
+async function pgInvoiceDetail(id) {
+  const el = document.getElementById('content');
+  
+  try {
+    const inv = await api('GET', `/api/invoices/${id}/`);
+    
+    const isPaid = (inv.status || 'paid').toLowerCase() === 'paid';
+    const statusBadge = isPaid
+      ? `<span class="px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">Paid</span>`
+      : `<span class="px-3 py-1 rounded-full text-xs font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20">Pending</span>`;
+
+    const smsBadge = `<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"><svg class="w-3.5 h-3.5 stroke-current fill-none" stroke-width="2" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg> WhatsApp Sent</span>`;
+
+    el.innerHTML = `
+      <div class="space-y-6 max-w-4xl mx-auto">
+        
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <div class="flex items-center gap-3">
+              <h1 class="text-2xl font-bold text-white font-mono tracking-tight">${inv.invoice_number}</h1>
+              ${statusBadge}
+            </div>
+            <p class="text-xs text-zinc-400 mt-1">Created on ${fmtDate(inv.invoice_date)}</p>
+          </div>
+          
+          <div class="flex items-center gap-2">
+            <button onclick="go('/invoices')" class="px-3.5 py-2 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 border border-zinc-800 rounded-xl text-xs font-medium transition-all">
+              ← Back to List
+            </button>
+            <button onclick="go('/invoices/${inv.id}/edit')" class="px-3.5 py-2 bg-orange-600/20 hover:bg-orange-600/30 text-orange-400 border border-orange-500/30 rounded-xl text-xs font-medium transition-all">
+              Edit Invoice
+            </button>
+            <a href="/invoices/${inv.id}/print/" target="_blank" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-semibold transition-all shadow-md shadow-emerald-600/20 flex items-center gap-1.5">
+              <svg class="w-4 h-4 stroke-current fill-none" stroke-width="2" viewBox="0 0 24 24"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+              <span>Print PDF</span>
+            </a>
+          </div>
+        </div>
+
+        <div class="card-elevation p-6 lg:p-8 space-y-8">
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 border-b border-zinc-800 pb-6">
+            <div>
+              <div class="text-xs font-bold uppercase tracking-wider text-orange-400 mb-2">Billed To</div>
+              <h2 class="text-lg font-bold text-white">${inv.customer_name}</h2>
+              ${inv.customer_mobile ? `<p class="text-xs text-zinc-400 font-mono mt-1">📞 ${inv.customer_mobile}</p>` : ''}
+              ${inv.customer_address ? `<p class="text-xs text-zinc-400 mt-1">📍 ${inv.customer_address}</p>` : ''}
+              ${inv.customer_email ? `<p class="text-xs text-zinc-400 mt-1">✉️ ${inv.customer_email}</p>` : ''}
+            </div>
+
+            <div class="md:text-right space-y-1">
+              <div class="text-xs font-bold uppercase tracking-wider text-zinc-400 mb-2">Vehicle Details</div>
+              ${inv.car_number ? `<div class="text-sm font-bold text-zinc-200 font-mono">Vehicle No: ${inv.car_number}</div>` : ''}
+              ${inv.car_model ? `<div class="text-xs text-zinc-400">Model: ${inv.car_model}</div>` : ''}
+              <div class="mt-3 pt-2 border-t border-zinc-800/60 inline-block">
+                ${smsBadge}
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <h3 class="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-3">Line Items Summary</h3>
+            <div class="overflow-x-auto border border-zinc-800 rounded-xl">
+              <table class="w-full text-left text-xs border-collapse">
+                <thead class="bg-[#0E0E11] text-[10px] uppercase font-bold text-zinc-400 border-b border-zinc-800">
+                  <tr>
+                    <th class="py-3 pl-4">#</th>
+                    <th class="py-3 px-3">Item Description</th>
+                    <th class="py-3 px-3 text-center">Qty</th>
+                    <th class="py-3 px-3 text-center">Unit</th>
+                    <th class="py-3 px-3 text-right">Rate</th>
+                    <th class="py-3 pr-4 text-right">Amount</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-zinc-800/40">
+                  ${(inv.line_items || []).map((item, idx) => `
+                    <tr class="table-row-hover">
+                      <td class="py-3 pl-4 font-mono text-zinc-500">${idx + 1}</td>
+                      <td class="py-3 px-3 font-semibold text-zinc-200">${item.product_name}</td>
+                      <td class="py-3 px-3 text-center font-mono tabular-nums">${item.quantity}</td>
+                      <td class="py-3 px-3 text-center text-zinc-400">${item.unit}</td>
+                      <td class="py-3 px-3 text-right font-mono tabular-nums text-zinc-300">${fmt(item.rate)}</td>
+                      <td class="py-3 pr-4 text-right font-mono font-bold tabular-nums text-zinc-100">${fmt(item.amount)}</td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="flex flex-col sm:flex-row justify-between items-start gap-6 pt-4 border-t border-zinc-800">
+            <div class="max-w-md">
+              ${inv.notes ? `
+                <div class="text-[10px] font-bold uppercase text-zinc-500 mb-1">Service Notes & Remarks</div>
+                <p class="text-xs text-zinc-300 bg-[#09090B] p-3 rounded-xl border border-zinc-800/80 leading-relaxed">${inv.notes}</p>
+              ` : ''}
+            </div>
+
+            <div class="w-full sm:w-64 space-y-2 text-xs font-mono">
+              <div class="flex justify-between py-1 border-b border-zinc-800/50">
+                <span class="text-zinc-400">Subtotal:</span>
+                <span class="font-bold text-zinc-200 tabular-nums">${fmt(inv.subtotal)}</span>
+              </div>
+              <div class="flex justify-between py-1 border-b border-zinc-800/50">
+                <span class="text-zinc-400">Discount:</span>
+                <span class="font-bold text-amber-400 tabular-nums">- ${fmt(inv.discount)}</span>
+              </div>
+              <div class="flex justify-between py-2 text-sm">
+                <span class="font-bold text-white">Total Amount:</span>
+                <span class="font-black text-orange-400 tabular-nums">${fmt(inv.total)}</span>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>`;
+  } catch(err) {
+    toast(err.detail || 'Failed to load invoice details', 'err');
+    go('/invoices');
+  }
+}
+
+async function pgInvoiceForm(id) {
+  const el = document.getElementById('content');
+  const isEdit = Boolean(id);
+  
   el.innerHTML = `
-    <div class="page-header">
-      <div><h1>Invoices</h1><div class="sub">${invs.length} invoice${invs.length !== 1 ? 's' : ''}</div></div>
-      <div class="page-header-actions">
-        <button class="btn btn-primary" onclick="go('/invoices/new')">
-          <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          New Invoice
-        </button>
-      </div>
-    </div>
-    <div class="card">
-      <div class="card-header" style="gap:12px">
-        <input id="inv-search" class="form-input" placeholder="Search invoice #, customer, vehicle\u2026" value="${q}" style="max-width:340px">
-      </div>
-      <div class="card-body" style="padding:0">
-        ${invs.length === 0
-          ? '<div class="empty-state"><p>No invoices found.</p></div>'
-          : `<div class="table-wrap"><table class="data-table">
-              <thead><tr>
-                <th>Invoice #</th><th>Date</th><th>Customer</th>
-                <th>Vehicle</th><th class="text-right">Total</th><th></th>
-              </tr></thead>
-              <tbody>
-                ${invs.map(inv => `
-                  <tr class="clickable" onclick="go('/invoices/${inv.id}')">
-                    <td class="fw-600 text-orange">${inv.invoice_number}</td>
-                    <td class="text-dim">${fmtDate(inv.invoice_date)}</td>
-                    <td>${inv.customer_name}</td>
-                    <td class="text-dim">${[inv.car_number, inv.car_model].filter(Boolean).join(' \u00b7') || '\u2014'}</td>
-                    <td class="text-right fw-600 text-mono">${fmt(inv.total)}</td>
-                    <td>
-                      <button class="icon-btn" title="Edit"
-                        onclick="event.stopPropagation();go('/invoices/${inv.id}/edit')">
-                        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-                          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-                          <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-                        </svg>
-                      </button>
-                    </td>
-                  </tr>`).join('')}
-              </tbody>
-            </table></div>`}
+    <div class="space-y-6 max-w-4xl mx-auto">
+      <div class="h-8 w-48 bg-zinc-800 rounded-xl skeleton-pulse"></div>
+      <div class="card-elevation p-6 space-y-6">
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div class="h-10 bg-zinc-900 rounded-xl skeleton-pulse"></div>
+          <div class="h-10 bg-zinc-900 rounded-xl skeleton-pulse"></div>
+          <div class="h-10 bg-zinc-900 rounded-xl skeleton-pulse"></div>
+        </div>
+        <div class="h-40 bg-zinc-900 rounded-xl skeleton-pulse"></div>
       </div>
     </div>`;
 
-  let _t;
-  document.getElementById('inv-search')?.addEventListener('input', e => {
-    clearTimeout(_t);
-    _t = setTimeout(() => pgInvoiceList(e.target.value.trim()), 280);
-  });
+  try {
+    const customers = await api('GET', '/api/customers/');
+    let invoiceData = null;
+
+    if (isEdit) {
+      invoiceData = await api('GET', `/api/invoices/${id}/`);
+    } else if (_draftInvoiceFromOcr) {
+      invoiceData = _draftInvoiceFromOcr;
+      _draftInvoiceFromOcr = null;
+    } else {
+      const nextNumRes = await api('GET', '/api/invoices/next-number/');
+      invoiceData = {
+        invoice_number: nextNumRes.next_number || '',
+        invoice_date: todayISO(),
+        customer: '',
+        car_number: '',
+        car_model: '',
+        discount: 0,
+        notes: '',
+        line_items: [{ product_name: '', quantity: 1, unit: 'PCS', rate: '' }]
+      };
+    }
+
+    renderInvoiceFormScreen(el, invoiceData, customers, isEdit);
+  } catch(err) {
+    toast(err.detail || 'Error loading invoice form', 'err');
+    go('/invoices');
+  }
 }
 
-/* ── Invoice Form (create + edit) ──────────────────────────────────────── */
-async function pgInvoiceForm(id) {
-  const isEdit = !!id;
-  const [customers, invoice, numData] = await Promise.all([
-    api('GET', '/api/customers/'),
-    isEdit ? api('GET', `/api/invoices/${id}/`) : Promise.resolve(null),
-    !isEdit ? api('GET', '/api/invoices/next-number/') : Promise.resolve(null),
-  ]);
+function renderInvoiceFormScreen(container, inv, customers, isEdit) {
+  const customerOpts = customers.map(c => 
+    `<option value="${c.id}"${inv.customer == c.id || (inv.customer_match && inv.customer_match.id == c.id) ? ' selected' : ''}>${c.name} (${c.mobile || 'No Mobile'})</option>`
+  ).join('');
 
-  const inv = invoice || {};
-  const initItems = (inv.line_items && inv.line_items.length)
-    ? inv.line_items
-    : [{ id: null, product_name: '', quantity: '1', unit: 'PCS', rate: '' }];
+  const items = (inv.line_items && inv.line_items.length) ? inv.line_items : [{ product_name: '', quantity: 1, unit: 'PCS', rate: '' }];
 
-  const el = document.getElementById('content');
-  el.innerHTML = `
-    <div class="page-header">
-      <div>
-        <h1>${isEdit ? 'Edit Invoice' : 'New Invoice'}</h1>
-        <div class="sub">${isEdit ? inv.invoice_number : 'Fill in details and add line items'}</div>
-      </div>
-      <div class="page-header-actions">
-        <button class="btn btn-secondary" onclick="history.back()">
-          <svg viewBox="0 0 24 24"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
-          Back
-        </button>
-      </div>
-    </div>
-
-    <form id="inv-form" autocomplete="off" novalidate>
-
-      <!-- Invoice header details -->
-      <div class="card mb-4">
-        <div class="card-header"><span class="card-title">Invoice Details</span></div>
-        <div class="card-body">
-          <div class="form-grid">
-            <div class="form-group">
-              <label class="form-label">Invoice Number <span class="req">*</span></label>
-              <input name="invoice_number" class="form-input" required
-                value="${inv.invoice_number || numData?.next_number || ''}"
-                placeholder="e.g. 42/26-27">
-            </div>
-            <div class="form-group">
-              <label class="form-label">Invoice Date <span class="req">*</span></label>
-              <input name="invoice_date" type="date" class="form-input" required
-                value="${inv.invoice_date || todayISO()}">
-            </div>
-            <div class="form-group">
-              <label class="form-label">Customer <span class="req">*</span></label>
-              <select name="customer" class="form-input" required>
-                <option value="">&mdash; Select Customer &mdash;</option>
-                ${customers.map(c =>
-                  `<option value="${c.id}" ${inv.customer == c.id ? 'selected' : ''}>${c.name}</option>`
-                ).join('')}
-              </select>
-            </div>
-            <div class="form-group">
-              <label class="form-label">Vehicle Number</label>
-              <input name="car_number" class="form-input" placeholder="GJ01 RS 1098"
-                value="${inv.car_number || ''}">
-            </div>
-            <div class="form-group">
-              <label class="form-label">Vehicle Model</label>
-              <input name="car_model" class="form-input" placeholder="XUV500"
-                value="${inv.car_model || ''}">
-            </div>
-            <div class="form-group">
-              <label class="form-label">Discount (&#8377;)</label>
-              <input name="discount" type="number" step="0.01" min="0" class="form-input"
-                placeholder="0.00" value="${inv.discount || '0'}">
-            </div>
-          </div>
-          <div class="form-group" style="margin-top:14px">
-            <label class="form-label">Notes</label>
-            <textarea name="notes" class="form-input" rows="2"
-              placeholder="Optional notes">${inv.notes || ''}</textarea>
-          </div>
+  container.innerHTML = `
+    <form id="inv-form" onsubmit="handleInvoiceFormSubmit(event, ${isEdit ? inv.id : 'null'})" class="space-y-6 max-w-4xl mx-auto">
+      
+      <div class="flex items-center justify-between gap-4">
+        <div>
+          <h1 class="text-2xl font-bold text-white tracking-tight">${isEdit ? 'Edit Invoice' : 'Create New Invoice'}</h1>
+          <p class="text-xs text-zinc-400 mt-1">Fill in billing details, line items, and customer info</p>
+        </div>
+        
+        <div class="flex items-center gap-3">
+          <button type="button" onclick="go('/invoices')" class="px-4 py-2.5 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 border border-zinc-800 rounded-xl text-xs font-medium transition-all">
+            Cancel
+          </button>
+          <button id="inv-save-btn" type="submit" class="px-5 py-2.5 bg-orange-600 hover:bg-orange-500 text-white rounded-xl text-xs font-semibold shadow-lg shadow-orange-600/20 transition-all flex items-center gap-2">
+            <svg class="w-4 h-4 stroke-current fill-none" stroke-width="2" viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+            <span>Save & Notify WhatsApp</span>
+          </button>
         </div>
       </div>
 
-      <!-- Line Items -->
-      <div class="card mb-4">
-        <div class="card-header">
-          <span class="card-title">Line Items</span>
-          <span class="text-dim" style="font-size:.77rem">At least one item required</span>
+      <div class="card-elevation p-6 lg:p-8 space-y-6">
+        
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+          
+          <div>
+            <label class="block text-[10px] font-bold uppercase tracking-wider text-zinc-400 mb-1.5">Invoice Number *</label>
+            <input type="text" name="invoice_number" value="${inv.invoice_number || ''}" required class="w-full bg-[#09090B] border border-zinc-800 rounded-xl px-3.5 py-2 text-xs text-zinc-100 font-mono font-bold focus:border-orange-500 focus:outline-none">
+            <div id="err-invoice_number" class="text-[10px] text-rose-400 mt-1 hidden"></div>
+          </div>
+
+          <div>
+            <label class="block text-[10px] font-bold uppercase tracking-wider text-zinc-400 mb-1.5">Invoice Date *</label>
+            <input type="date" name="invoice_date" value="${inv.invoice_date || todayISO()}" required class="w-full bg-[#09090B] border border-zinc-800 rounded-xl px-3.5 py-2 text-xs text-zinc-100 font-mono focus:border-orange-500 focus:outline-none">
+            <div id="err-invoice_date" class="text-[10px] text-rose-400 mt-1 hidden"></div>
+          </div>
+
+          <div>
+            <div class="flex items-center justify-between mb-1.5">
+              <label class="block text-[10px] font-bold uppercase tracking-wider text-zinc-400">Customer *</label>
+              <button type="button" onclick="openInlineCustomerModal()" class="text-[10px] font-bold text-orange-400 hover:underline flex items-center gap-1">
+                + New Customer
+              </button>
+            </div>
+            <select name="customer" id="inv-cust-select" required class="w-full bg-[#09090B] border border-zinc-800 rounded-xl px-3 py-2 text-xs text-zinc-100 focus:border-orange-500 focus:outline-none cursor-pointer">
+              <option value="">— Select Customer —</option>
+              ${customerOpts}
+            </select>
+            <div id="err-customer" class="text-[10px] text-rose-400 mt-1 hidden"></div>
+          </div>
+
         </div>
-        <div class="card-body" style="padding-bottom:14px">
-          <div class="table-wrap">
-            <table class="li-table">
-              <thead><tr>
-                <th style="width:32px">#</th>
-                <th>Description / Product</th>
-                <th style="width:88px">Qty</th>
-                <th style="width:76px">Unit</th>
-                <th style="width:108px">Rate (&#8377;)</th>
-                <th class="th-right" style="width:108px">Amount (&#8377;)</th>
-                <th style="width:32px"></th>
-              </tr></thead>
-              <tbody id="li-body">
-                ${initItems.map((it, i) => liRow(i, it)).join('')}
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-5 pt-4 border-t border-zinc-800/60">
+          <div>
+            <label class="block text-[10px] font-bold uppercase tracking-wider text-zinc-400 mb-1.5">Vehicle Number (Car No)</label>
+            <input type="text" name="car_number" value="${inv.car_number || ''}" placeholder="e.g. GJ01AB1234" class="w-full bg-[#09090B] border border-zinc-800 rounded-xl px-3.5 py-2 text-xs text-zinc-100 font-mono focus:border-orange-500 focus:outline-none">
+          </div>
+
+          <div>
+            <label class="block text-[10px] font-bold uppercase tracking-wider text-zinc-400 mb-1.5">Car Model / Make</label>
+            <input type="text" name="car_model" value="${inv.car_model || ''}" placeholder="e.g. Maruti Suzuki Swift Dzire" class="w-full bg-[#09090B] border border-zinc-800 rounded-xl px-3.5 py-2 text-xs text-zinc-100 focus:border-orange-500 focus:outline-none">
+          </div>
+        </div>
+
+        <div class="pt-4 border-t border-zinc-800/60 space-y-3">
+          <div class="flex items-center justify-between">
+            <h3 class="text-xs font-bold text-zinc-200 uppercase tracking-wider">Line Items Builder</h3>
+            <span class="text-[10px] text-zinc-500">Live amount calculations enabled</span>
+          </div>
+
+          <div class="overflow-x-auto border border-zinc-800 rounded-xl">
+            <table class="w-full text-left border-collapse min-w-[650px]">
+              <thead class="bg-[#0E0E11] text-[10px] uppercase font-bold text-zinc-400 border-b border-zinc-800">
+                <tr>
+                  <th class="py-3 pl-4 w-10 text-center">#</th>
+                  <th class="py-3 px-2">Item Description *</th>
+                  <th class="py-3 px-2 w-24 text-center">Qty</th>
+                  <th class="py-3 px-2 w-24 text-center">Unit</th>
+                  <th class="py-3 px-2 w-32 text-right">Rate (₹)</th>
+                  <th class="py-3 px-4 w-32 text-right">Amount</th>
+                  <th class="py-3 pr-4 w-12 text-center"></th>
+                </tr>
+              </thead>
+              <tbody id="li-tbody" class="divide-y divide-zinc-800/40">
+                ${items.map((item, idx) => renderLineItemRow(idx, item)).join('')}
               </tbody>
             </table>
           </div>
-          <button type="button" id="add-row" class="add-row-btn">
-            <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-            Add Line Item
-          </button>
-        </div>
-      </div>
 
-      <!-- Totals + Submit -->
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap">
-        <div style="display:flex;flex-direction:column;gap:8px">
-          <button type="submit" id="submit-btn" class="btn btn-primary" style="min-width:180px;justify-content:center">
-            <svg viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
-            ${isEdit ? 'Update Invoice' : 'Create Invoice'}
+          <div id="err-line_items" class="text-[10px] text-rose-400 hidden"></div>
+
+          <button type="button" onclick="addEmptyLineItemRow()" class="py-2 px-4 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-orange-400 text-xs font-semibold rounded-xl transition-all flex items-center gap-1.5">
+            <svg class="w-4 h-4 stroke-current fill-none" stroke-width="2" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            <span>+ Add Line Item</span>
           </button>
-          ${isEdit ? `
-            <button type="button" class="btn btn-danger btn-sm" style="justify-content:center"
-              onclick="deleteInvoice(${id})">
-              <svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/>
-                <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
-                <path d="M10 11v6"/><path d="M14 11v6"/>
-                <path d="M9 6V4h6v2"/>
-              </svg>
-              Delete Invoice
-            </button>` : ''}
         </div>
-        <div class="totals-panel">
-          <div class="totals-row">
-            <span class="tr-label">Subtotal</span>
-            <span id="t-sub" class="tr-val">&#8377;0.00</span>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6 border-t border-zinc-800">
+          <div>
+            <label class="block text-[10px] font-bold uppercase tracking-wider text-zinc-400 mb-1.5">Service Notes & Remarks</label>
+            <textarea name="notes" rows="3" placeholder="Additional remarks, warranty notes, next service due..." class="w-full bg-[#09090B] border border-zinc-800 rounded-xl px-3.5 py-2 text-xs text-zinc-100 focus:border-orange-500 focus:outline-none">${inv.notes || ''}</textarea>
           </div>
-          <div class="totals-row">
-            <span class="tr-label">Discount</span>
-            <span id="t-disc" class="tr-val">&#8377;0.00</span>
-          </div>
-          <div class="totals-row grand">
-            <span class="tr-label">Total</span>
-            <span id="t-total" class="tr-val">&#8377;0.00</span>
+
+          <div class="bg-[#09090B] p-5 rounded-2xl border border-zinc-800 space-y-3 font-mono text-xs">
+            <div class="flex justify-between py-1 border-b border-zinc-800/60">
+              <span class="text-zinc-400">Subtotal:</span>
+              <span id="summary-subtotal" class="font-bold text-zinc-100 tabular-nums">₹0.00</span>
+            </div>
+
+            <div class="flex items-center justify-between py-1 border-b border-zinc-800/60 gap-4">
+              <span class="text-zinc-400">Discount Amount (₹):</span>
+              <input type="number" name="discount" step="0.01" min="0" value="${inv.discount || 0}" oninput="recalculateTotals()" class="w-28 bg-[#121215] border border-zinc-800 rounded-lg px-2.5 py-1 text-xs text-right font-mono tabular-nums text-amber-400 focus:border-orange-500 focus:outline-none">
+            </div>
+
+            <div class="flex justify-between pt-1 text-sm">
+              <span class="font-bold text-white">Final Total:</span>
+              <span id="summary-total" class="font-black text-orange-400 tabular-nums">₹0.00</span>
+            </div>
           </div>
         </div>
+
       </div>
     </form>`;
 
-  recalc();
-
-  // Add row
-  document.getElementById('add-row').addEventListener('click', () => {
-    const tbody = document.getElementById('li-body');
-    const idx = tbody.querySelectorAll('.li-row').length;
-    tbody.insertAdjacentHTML('beforeend', liRow(idx, { id: null, product_name: '', quantity: '1', unit: 'PCS', rate: '' }));
-    renumber();
-    tbody.querySelector('.li-row:last-child .li-product')?.focus();
-  });
-
-  // Live recalc
-  document.getElementById('inv-form').addEventListener('input', e => {
-    const n = e.target.name || '';
-    if (n === 'li_qty' || n === 'li_rate' || n === 'discount') recalc();
-  });
-
-  // Delete row
-  document.getElementById('li-body').addEventListener('click', e => {
-    const btn = e.target.closest('.li-del-btn');
-    if (!btn) return;
-    const rows = document.querySelectorAll('#li-body .li-row');
-    if (rows.length <= 1) { toast('At least one line item is required', 'error'); return; }
-    btn.closest('.li-row').remove();
-    renumber();
-    recalc();
-  });
-
-  // Submit
-  document.getElementById('inv-form').addEventListener('submit', async e => {
-    e.preventDefault();
-    const btn = document.getElementById('submit-btn');
-    btn.disabled = true;
-    const orig = btn.innerHTML;
-    btn.innerHTML = '<span style="opacity:.6">Saving\u2026</span>';
-
-    try {
-      const payload = collectForm();
-      if (!payload.customer) { throw { customer: ['Please select a customer.'] }; }
-      if (!payload.line_items.length) { throw { line_items: ['At least one item required.'] }; }
-
-      if (isEdit) {
-        await api('PUT', `/api/invoices/${id}/`, payload);
-        toast('Invoice updated successfully!');
-        go(`/invoices/${id}`);
-      } else {
-        const created = await api('POST', '/api/invoices/', payload);
-        toast('Invoice created!');
-        go(`/invoices/${created.id}`);
-      }
-    } catch (err) {
-      btn.disabled = false;
-      btn.innerHTML = orig;
-      const msg = (err && (err.detail || Object.values(err).flat().join(' '))) || 'Save failed. Check all fields.';
-      toast(msg, 'error');
-    }
-  });
+  recalculateTotals();
 }
 
-/* ── Line item row HTML ─────────────────────────────────────────────────── */
-const UNITS = ['PCS', 'NOS', 'LTR', 'KG', 'MTR', 'SET', '-'];
-
-function liRow(idx, item) {
-  const unitOpts = UNITS.map(u =>
-    `<option${u === (item.unit || 'PCS') ? ' selected' : ''}>${u}</option>`
-  ).join('');
+function renderLineItemRow(idx, item) {
   return `
-    <tr class="li-row">
-      <td class="td-sr">${idx + 1}</td>
-      <td><input class="form-input li-product" name="li_prod" placeholder="Product / Service"
-           value="${item.product_name || ''}"></td>
-      <td><input class="form-input li-qty" name="li_qty" type="number"
-           step="0.01" min="0.01" placeholder="1" value="${item.quantity || '1'}"></td>
-      <td><select class="form-input li-unit" name="li_unit">${unitOpts}</select></td>
-      <td><input class="form-input li-rate" name="li_rate" type="number"
-           step="0.01" min="0" placeholder="0.00" value="${item.rate || ''}"></td>
-      <td class="td-amount">\u2014</td>
-      <td>
-        <input type="hidden" name="li_id" value="${item.id || ''}">
-        <button type="button" class="li-del-btn" title="Remove row">
-          <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    <tr class="li-row table-row-hover text-xs" data-row-id="${item.id || ''}">
+      <td class="py-3 pl-4 text-center font-mono text-zinc-500 td-sr">${idx + 1}</td>
+      <td class="py-2 px-2">
+        <input type="text" name="li_product_name" value="${item.product_name || ''}" placeholder="Item description" required class="w-full bg-[#09090B] border border-zinc-800 rounded-xl px-3 py-2 text-xs text-zinc-100 focus:border-orange-500 focus:outline-none">
+      </td>
+      <td class="py-2 px-2 w-24">
+        <input type="number" name="li_quantity" step="0.01" min="0.01" value="${item.quantity || 1}" oninput="recalculateTotals()" required class="w-full bg-[#09090B] border border-zinc-800 rounded-xl px-3 py-2 text-xs text-zinc-100 font-mono tabular-nums focus:border-orange-500 focus:outline-none li-qty">
+      </td>
+      <td class="py-2 px-2 w-24">
+        <select name="li_unit" class="w-full bg-[#09090B] border border-zinc-800 rounded-xl px-2 py-2 text-xs text-zinc-200 focus:border-orange-500 focus:outline-none cursor-pointer">
+          <option value="PCS"${item.unit === 'PCS' ? ' selected' : ''}>PCS</option>
+          <option value="LTR"${item.unit === 'LTR' ? ' selected' : ''}>LTR</option>
+          <option value="SET"${item.unit === 'SET' ? ' selected' : ''}>SET</option>
+          <option value="JOB"${item.unit === 'JOB' ? ' selected' : ''}>JOB</option>
+        </select>
+      </td>
+      <td class="py-2 px-2 w-32">
+        <input type="number" name="li_rate" step="0.01" min="0" value="${item.rate || ''}" placeholder="0.00" oninput="recalculateTotals()" required class="w-full bg-[#09090B] border border-zinc-800 rounded-xl px-3 py-2 text-xs text-zinc-100 font-mono tabular-nums focus:border-orange-500 focus:outline-none li-rate">
+      </td>
+      <td class="py-3 px-4 text-right font-mono font-bold text-zinc-100 tabular-nums td-row-amount">
+        ₹0.00
+      </td>
+      <td class="py-2 pr-4 text-center w-12">
+        <button type="button" onclick="removeLineItemRow(this)" class="p-1.5 text-zinc-500 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors" title="Remove Item">
+          <svg class="w-4 h-4 stroke-current fill-none" stroke-width="2" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
         </button>
       </td>
     </tr>`;
 }
 
-function renumber() {
-  document.querySelectorAll('#li-body .li-row').forEach((row, i) => {
+function addEmptyLineItemRow() {
+  const tbody = document.getElementById('li-tbody');
+  if (!tbody) return;
+  const count = tbody.querySelectorAll('.li-row').length;
+  tbody.insertAdjacentHTML('beforeend', renderLineItemRow(count, { product_name: '', quantity: 1, unit: 'PCS', rate: '' }));
+  renumberLineItems();
+  recalculateTotals();
+}
+
+function removeLineItemRow(btn) {
+  const tbody = document.getElementById('li-tbody');
+  if (!tbody) return;
+  const rows = tbody.querySelectorAll('.li-row');
+  if (rows.length <= 1) {
+    toast('An invoice must have at least one line item.', 'warn');
+    return;
+  }
+  btn.closest('.li-row').remove();
+  renumberLineItems();
+  recalculateTotals();
+  toast('Line item removed', 'ok');
+}
+
+function renumberLineItems() {
+  document.querySelectorAll('#li-tbody .li-row').forEach((row, idx) => {
     const sr = row.querySelector('.td-sr');
-    if (sr) sr.textContent = i + 1;
+    if (sr) sr.textContent = idx + 1;
   });
 }
 
-function recalc() {
-  let sub = 0;
-  document.querySelectorAll('#li-body .li-row').forEach(row => {
-    const qty  = parseFloat(row.querySelector('.li-qty')?.value)  || 0;
-    const rate = parseFloat(row.querySelector('.li-rate')?.value) || 0;
-    const amt  = qty * rate;
-    sub += amt;
-    const amtEl = row.querySelector('.td-amount');
-    if (amtEl) amtEl.textContent = amt > 0 ? fmt(amt) : '\u2014';
+function recalculateTotals() {
+  let subtotal = 0;
+  
+  document.querySelectorAll('#li-tbody .li-row').forEach(row => {
+    const qty = parseFloat(row.querySelector('[name="li_quantity"]')?.value) || 0;
+    const rate = parseFloat(row.querySelector('[name="li_rate"]')?.value) || 0;
+    const amount = qty * rate;
+    
+    subtotal += amount;
+    
+    const amountEl = row.querySelector('.td-row-amount');
+    if (amountEl) amountEl.textContent = amount > 0 ? fmt(amount) : '₹0.00';
   });
-  const disc = parseFloat(document.querySelector('[name=discount]')?.value) || 0;
-  const tSub = document.getElementById('t-sub');
-  const tDisc = document.getElementById('t-disc');
-  const tTotal = document.getElementById('t-total');
-  if (tSub)   tSub.textContent   = fmt(sub);
-  if (tDisc)  tDisc.textContent  = fmt(disc);
-  if (tTotal) tTotal.textContent = fmt(sub - disc);
+
+  const discount = parseFloat(document.querySelector('[name="discount"]')?.value) || 0;
+  const total = Math.max(0, subtotal - discount);
+
+  if (document.getElementById('summary-subtotal')) document.getElementById('summary-subtotal').textContent = fmt(subtotal);
+  if (document.getElementById('summary-discount')) document.getElementById('summary-discount').textContent = fmt(discount);
+  if (document.getElementById('summary-total')) document.getElementById('summary-total').textContent = fmt(total);
 }
 
-function collectForm() {
-  const f = document.getElementById('inv-form');
-  const line_items = [];
-  document.querySelectorAll('#li-body .li-row').forEach(row => {
-    const name = row.querySelector('.li-prod')?.value.trim()
-               || row.querySelector('[name=li_prod]')?.value.trim() || '';
-    if (!name) return;
-    const rawId = row.querySelector('[name=li_id]')?.value;
-    line_items.push({
-      id:           rawId ? parseInt(rawId) : null,
-      product_name: name,
-      quantity:     row.querySelector('.li-qty')?.value || '1',
-      unit:         row.querySelector('.li-unit')?.value || 'PCS',
-      rate:         row.querySelector('.li-rate')?.value || '0',
+async function handleInvoiceFormSubmit(e, id) {
+  e.preventDefault();
+  const form = e.target;
+  const btn = document.getElementById('inv-save-btn');
+
+  const payload = {
+    invoice_number: form.querySelector('[name="invoice_number"]').value.trim(),
+    invoice_date: form.querySelector('[name="invoice_date"]').value,
+    customer: parseInt(form.querySelector('[name="customer"]').value),
+    car_number: form.querySelector('[name="car_number"]').value.trim(),
+    car_model: form.querySelector('[name="car_model"]').value.trim(),
+    discount: parseFloat(form.querySelector('[name="discount"]').value) || 0,
+    notes: form.querySelector('[name="notes"]').value.trim(),
+    line_items: []
+  };
+
+  document.querySelectorAll('#li-tbody .li-row').forEach(row => {
+    const pName = row.querySelector('[name="li_product_name"]')?.value.trim();
+    if (!pName) return;
+    const rowId = row.dataset.rowId;
+    payload.line_items.push({
+      id: rowId ? parseInt(rowId) : null,
+      product_name: pName,
+      quantity: parseFloat(row.querySelector('[name="li_quantity"]')?.value) || 1,
+      unit: row.querySelector('[name="li_unit"]')?.value || 'PCS',
+      rate: parseFloat(row.querySelector('[name="li_rate"]')?.value) || 0
     });
   });
-  return {
-    invoice_number: f.querySelector('[name=invoice_number]').value.trim(),
-    invoice_date:   f.querySelector('[name=invoice_date]').value,
-    customer:       parseInt(f.querySelector('[name=customer]').value) || null,
-    car_number:     f.querySelector('[name=car_number]').value.trim(),
-    car_model:      f.querySelector('[name=car_model]').value.trim(),
-    discount:       f.querySelector('[name=discount]').value || '0',
-    notes:          f.querySelector('[name=notes]').value.trim(),
-    line_items,
-  };
+
+  btn.disabled = true;
+  btn.innerHTML = `<span class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span> Saving...`;
+
+  try {
+    const method = id ? 'PUT' : 'POST';
+    const url = id ? `/api/invoices/${id}/` : '/api/invoices/';
+    const res = await api(method, url, payload);
+    
+    toast('✓ Invoice saved successfully!', 'success');
+    go(`/invoices/${res.id}`);
+  } catch(err) {
+    btn.disabled = false;
+    btn.innerHTML = `<span>Save & Notify WhatsApp</span>`;
+    
+    if (typeof err === 'object') {
+      Object.keys(err).forEach(key => {
+        const errEl = document.getElementById(`err-${key}`);
+        if (errEl) {
+          errEl.textContent = Array.isArray(err[key]) ? err[key].join(' ') : String(err[key]);
+          errEl.classList.remove('hidden');
+        }
+      });
+    }
+    toast('Please fix the errors in the form.', 'err');
+  }
 }
 
-/* ── Invoice Detail ────────────────────────────────────────────────────── */
-async function pgInvoiceDetail(id) {
-  const inv = await api('GET', `/api/invoices/${id}/`);
+function openInlineCustomerModal() {
+  document.getElementById('inline-cust-modal')?.classList.remove('hidden');
+}
+function closeInlineCustomerModal() {
+  document.getElementById('inline-cust-modal')?.classList.add('hidden');
+}
+
+async function saveInlineCustomer() {
+  const name = document.getElementById('quick-cust-name').value.trim();
+  const mobile = document.getElementById('quick-cust-mobile').value.trim();
+  const address = document.getElementById('quick-cust-address').value.trim();
+
+  if (!name) { toast('Customer name is required.', 'warn'); return; }
+
+  const btn = document.getElementById('quick-cust-save-btn');
+  btn.disabled = true;
+
+  try {
+    const newCust = await api('POST', '/api/customers/', { name, mobile, address });
+    toast(`✓ Registered ${newCust.name}`, 'success');
+
+    const sel = document.getElementById('inv-cust-select');
+    if (sel) {
+      const opt = document.createElement('option');
+      opt.value = newCust.id;
+      opt.textContent = `${newCust.name} (${newCust.mobile || 'No Mobile'})`;
+      opt.selected = true;
+      sel.appendChild(opt);
+    }
+    closeInlineCustomerModal();
+  } catch(err) {
+    toast('Error creating customer', 'err');
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+
+/* ══════════════════════════════════════════════════════════════════════════
+   PHASE 3: CUSTOMER LIST & CUSTOMER 360 DETAIL VIEWS
+══════════════════════════════════════════════════════════════════════════ */
+
+async function pgCustomerList() {
   const el = document.getElementById('content');
+  
+  try {
+    const qParam = new URLSearchParams(location.search).get('q') || '';
+    const customers = await api('GET', qParam ? `/api/customers/?q=${encodeURIComponent(qParam)}` : '/api/customers/');
 
-  el.innerHTML = `
-    <div class="page-header">
-      <div>
-        <h1>Invoice <span class="text-orange">${inv.invoice_number}</span></h1>
-        <div class="sub">${fmtDate(inv.invoice_date)}</div>
-      </div>
-      <div class="page-header-actions">
-        <button class="btn btn-secondary" onclick="go('/invoices')">
-          <svg viewBox="0 0 24 24"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
-          Back
-        </button>
-        <a href="/invoices/${id}/print/" target="_blank" class="btn btn-secondary">
-          <svg viewBox="0 0 24 24"><polyline points="6 9 6 2 18 2 18 9"/>
-            <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>
-            <rect x="6" y="14" width="12" height="8"/>
-          </svg>
-          Print / PDF
-        </a>
-        <button class="btn btn-primary" onclick="go('/invoices/${id}/edit')">
-          <svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-          </svg>
-          Edit
-        </button>
-      </div>
-    </div>
-
-    <div class="card">
-      <div class="card-body">
-
-        <!-- Customer + Meta -->
-        <div style="display:grid;grid-template-columns:1fr auto;gap:24px;margin-bottom:20px">
+    el.innerHTML = `
+      <div class="space-y-6">
+        
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <div class="detail-label">Bill To</div>
-            <div style="font-size:1.1rem;font-weight:700;color:var(--t-100);margin-bottom:4px">${inv.customer_name}</div>
-            ${inv.customer_address ? `<div class="text-dim" style="font-size:.82rem">${inv.customer_address}</div>` : ''}
-            ${inv.customer_mobile  ? `<div class="text-dim" style="font-size:.82rem;margin-top:2px">${inv.customer_mobile}</div>` : ''}
-            ${inv.customer_email   ? `<div class="text-dim" style="font-size:.82rem">${inv.customer_email}</div>` : ''}
+            <h1 class="text-2xl font-bold text-white tracking-tight">Customers</h1>
+            <p class="text-xs text-zinc-400 mt-1">Manage customer records and view 360 purchasing history</p>
           </div>
-          <div style="text-align:right">
-            <div class="detail-label">Invoice No.</div>
-            <div style="font-size:1.25rem;font-weight:800;color:var(--orange);margin-bottom:10px">${inv.invoice_number}</div>
-            <div class="detail-label">Date</div>
-            <div style="font-weight:600;color:var(--t-100)">${fmtDate(inv.invoice_date)}</div>
-          </div>
-        </div>
-
-        ${inv.car_number || inv.car_model ? `
-        <div style="display:flex;gap:24px;margin-bottom:20px;padding:12px 16px;
-                    background:var(--bg-750);border-radius:8px;border:1px solid var(--border)">
-          ${inv.car_number ? `<div><div class="detail-label">Vehicle No.</div>
-            <div style="font-weight:600;color:var(--t-100)">${inv.car_number}</div></div>` : ''}
-          ${inv.car_model  ? `<div><div class="detail-label">Model</div>
-            <div style="font-weight:600;color:var(--t-100)">${inv.car_model}</div></div>` : ''}
-        </div>` : ''}
-
-        <!-- Items table -->
-        <div class="table-wrap" style="margin-bottom:20px">
-          <table class="data-table">
-            <thead><tr>
-              <th style="width:36px">#</th>
-              <th>Description</th>
-              <th class="text-right">Qty</th>
-              <th>Unit</th>
-              <th class="text-right">Rate</th>
-              <th class="text-right">Amount</th>
-            </tr></thead>
-            <tbody>
-              ${inv.line_items.map(it => `
-                <tr>
-                  <td class="text-dim">${it.sr_no}</td>
-                  <td class="fw-600">${it.product_name}</td>
-                  <td class="text-right text-mono">${it.quantity}</td>
-                  <td class="text-dim">${it.unit}</td>
-                  <td class="text-right text-mono">${Number(it.rate).toFixed(2)}</td>
-                  <td class="text-right fw-600 text-mono">${Number(it.amount).toFixed(2)}</td>
-                </tr>`).join('')}
-            </tbody>
-          </table>
-        </div>
-
-        <!-- Totals -->
-        <div style="display:flex;justify-content:flex-end">
-          <div class="totals-panel">
-            <div class="totals-row">
-              <span class="tr-label">Subtotal</span>
-              <span class="tr-val">${fmt(inv.subtotal)}</span>
-            </div>
-            ${Number(inv.discount) > 0 ? `
-            <div class="totals-row">
-              <span class="tr-label">Discount</span>
-              <span class="tr-val">\u2212${fmt(inv.discount)}</span>
-            </div>` : ''}
-            <div class="totals-row grand">
-              <span class="tr-label">Total</span>
-              <span class="tr-val">${fmt(inv.total)}</span>
-            </div>
-          </div>
-        </div>
-
-        ${inv.notes ? `<hr class="divider"><div class="detail-label">Notes</div>
-          <div style="font-size:.875rem;color:var(--t-400)">${inv.notes}</div>` : ''}
-
-        <!-- Delete action at bottom -->
-        <div style="margin-top:28px;padding-top:20px;border-top:1px solid var(--border);display:flex;justify-content:flex-end">
-          <button class="btn btn-danger btn-sm" onclick="deleteInvoice(${id})">
-            <svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/>
-              <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
-            </svg>
-            Delete Invoice
+          
+          <button onclick="go('/customers/new')" class="px-4 py-2.5 bg-orange-600 hover:bg-orange-500 text-white rounded-xl text-xs font-semibold shadow-lg shadow-orange-600/20 flex items-center gap-2 transition-all">
+            <svg class="w-4 h-4 stroke-current fill-none" stroke-width="2.5" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>
+            <span>New Customer</span>
           </button>
         </div>
-      </div>
-    </div>`;
-}
 
-/* ── Customer List ─────────────────────────────────────────────────────── */
-async function pgCustomerList(q) {
-  q = q === undefined ? '' : q;
-  const url = q ? `/api/customers/?q=${encodeURIComponent(q)}` : '/api/customers/';
-  const custs = await api('GET', url);
-  const el = document.getElementById('content');
+        <div class="card-elevation p-4">
+          <div class="relative">
+            <svg class="w-4 h-4 text-zinc-500 absolute left-3.5 top-1/2 -translate-y-1/2 stroke-current fill-none" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input id="cust-search-input" value="${qParam}" placeholder="Search customer by name, mobile number, location..." class="w-full bg-[#09090B] border border-zinc-800 rounded-xl pl-10 pr-4 py-2 text-xs text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-orange-500 transition-all">
+          </div>
+        </div>
 
-  el.innerHTML = `
-    <div class="page-header">
-      <div><h1>Customers</h1><div class="sub">${custs.length} customer${custs.length !== 1 ? 's' : ''}</div></div>
-      <div class="page-header-actions">
-        <button class="btn btn-primary" onclick="go('/customers/new')">
-          <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          New Customer
-        </button>
-      </div>
-    </div>
-    <div class="card">
-      <div class="card-header">
-        <input id="cust-search" class="form-input" placeholder="Search name, mobile, email\u2026"
-          value="${q}" style="max-width:340px">
-      </div>
-      <div class="card-body" style="padding:0">
-        ${custs.length === 0
-          ? '<div class="empty-state"><p>No customers found.</p></div>'
-          : `<div class="table-wrap"><table class="data-table">
-              <thead><tr>
-                <th>Name</th><th>Mobile</th><th>Address</th>
-                <th class="text-right">Invoices</th><th></th>
-              </tr></thead>
-              <tbody>
-                ${custs.map(c => `
+        <div class="card-elevation overflow-hidden">
+          ${customers.length === 0 ? `
+            <div class="p-12 text-center space-y-3">
+              <p class="text-sm font-semibold text-zinc-300">No customers registered yet.</p>
+              <button onclick="go('/customers/new')" class="px-4 py-2 bg-orange-600 text-white rounded-xl text-xs font-medium">Add First Customer</button>
+            </div>
+          ` : `
+            <div class="overflow-x-auto">
+              <table class="w-full text-left border-collapse text-xs">
+                <thead class="bg-[#0E0E11] text-[10px] uppercase font-bold tracking-wider text-zinc-400 border-b border-zinc-800">
                   <tr>
-                    <td class="fw-600">${c.name}</td>
-                    <td class="text-dim">${c.mobile || '\u2014'}</td>
-                    <td class="text-dim">${c.address || '\u2014'}</td>
-                    <td class="text-right">${c.invoice_count}</td>
-                    <td>
-                      <button class="icon-btn" title="Edit" onclick="go('/customers/${c.id}/edit')">
-                        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor"
-                             stroke-width="2" stroke-linecap="round">
-                          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-                          <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-                        </svg>
-                      </button>
-                    </td>
-                  </tr>`).join('')}
-              </tbody>
-            </table></div>`}
-      </div>
-    </div>`;
+                    <th class="py-3.5 pl-6">Customer Name</th>
+                    <th class="py-3.5 px-4">Mobile</th>
+                    <th class="py-3.5 px-4">Location / Address</th>
+                    <th class="py-3.5 px-4 text-center">Invoices</th>
+                    <th class="py-3.5 pr-6 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-zinc-800/40">
+                  ${customers.map(c => `
+                    <tr class="table-row-hover cursor-pointer" onclick="go('/customers/${c.id}')">
+                      <td class="py-4 pl-6 font-semibold text-zinc-100 hover:text-orange-400 transition-colors">
+                        ${c.name}
+                      </td>
+                      <td class="py-4 px-4 font-mono text-zinc-400">${c.mobile || '—'}</td>
+                      <td class="py-4 px-4 text-zinc-400">${c.address || '—'}</td>
+                      <td class="py-4 px-4 text-center font-mono font-bold text-orange-400">${c.invoice_count || 0}</td>
+                      <td class="py-4 pr-6 text-right" onclick="event.stopPropagation()">
+                        <div class="flex items-center justify-end gap-2">
+                          <button onclick="go('/customers/${c.id}')" class="px-2.5 py-1 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 rounded-lg text-[11px] border border-zinc-800">360 View</button>
+                          <button onclick="go('/customers/${c.id}/edit')" class="p-1.5 text-zinc-400 hover:text-orange-400 rounded-lg"><svg class="w-4 h-4 stroke-current fill-none" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+                        </div>
+                      </td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            </div>
+          `}
+        </div>
+      </div>`;
 
-  let _t;
-  document.getElementById('cust-search')?.addEventListener('input', e => {
-    clearTimeout(_t);
-    _t = setTimeout(() => pgCustomerList(e.target.value.trim()), 280);
-  });
+    let timer;
+    document.getElementById('cust-search-input')?.addEventListener('input', e => {
+      clearTimeout(timer);
+      timer = setTimeout(() => pgCustomerList(), 300);
+    });
+  } catch(err) {
+    toast('Error loading customer list', 'err');
+  }
 }
 
-/* ── Customer Form ─────────────────────────────────────────────────────── */
-async function pgCustomerForm(id) {
-  const c = id ? await api('GET', `/api/customers/${id}/`) : {};
+async function pgCustomerDetail(id) {
   const el = document.getElementById('content');
+  
+  try {
+    const data = await api('GET', `/api/customers/${id}/history/`);
+    const c = data.customer;
+    const stats = data.stats;
+
+    el.innerHTML = `
+      <div class="space-y-6 max-w-4xl mx-auto">
+        
+        <div class="flex items-center justify-between">
+          <div>
+            <h1 class="text-2xl font-bold text-white tracking-tight">${c.name}</h1>
+            <p class="text-xs text-zinc-400 mt-1">Customer 360 Intelligence & History</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <button onclick="go('/customers')" class="px-3.5 py-2 bg-zinc-900 text-zinc-300 rounded-xl text-xs font-medium">← Back</button>
+            <button onclick="triggerWhatsAppDraft(${c.id})" class="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-semibold shadow-md flex items-center gap-1.5">
+              💬 Draft WhatsApp
+            </button>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <div class="card-elevation p-4">
+            <span class="text-[10px] font-bold uppercase text-zinc-400">Total Spent</span>
+            <div class="text-xl font-bold text-orange-400 font-mono tabular-nums mt-1">${fmtK(stats.total_revenue)}</div>
+          </div>
+          <div class="card-elevation p-4">
+            <span class="text-[10px] font-bold uppercase text-zinc-400">Total Invoices</span>
+            <div class="text-xl font-bold text-zinc-100 font-mono tabular-nums mt-1">${stats.invoice_count}</div>
+          </div>
+          <div class="card-elevation p-4">
+            <span class="text-[10px] font-bold uppercase text-zinc-400">Avg Invoice Value</span>
+            <div class="text-xl font-bold text-zinc-100 font-mono tabular-nums mt-1">${fmtK(stats.avg_invoice_value)}</div>
+          </div>
+          <div class="card-elevation p-4">
+            <span class="text-[10px] font-bold uppercase text-zinc-400">Last Visit</span>
+            <div class="text-sm font-bold text-zinc-200 mt-1">${stats.last_visit ? fmtDate(stats.last_visit) : 'Never'}</div>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div class="card-elevation p-5 space-y-3">
+            <h3 class="text-xs font-bold uppercase tracking-wider text-zinc-400">Top Products Purchased</h3>
+            <div class="space-y-2">
+              ${(data.top_products || []).map(p => `
+                <div class="flex justify-between items-center text-xs p-2 bg-[#09090B] rounded-xl border border-zinc-800/60">
+                  <span class="font-medium text-zinc-200">${p.product_name}</span>
+                  <span class="font-mono text-orange-400">${p.times_ordered} orders</span>
+                </div>
+              `).join('') || '<span class="text-xs text-zinc-500">No purchase data available.</span>'}
+            </div>
+          </div>
+
+          <div class="card-elevation p-5 space-y-3">
+            <div class="flex justify-between items-center">
+              <h3 class="text-xs font-bold uppercase tracking-wider text-zinc-400">Customer Notes</h3>
+            </div>
+            <div class="flex gap-2">
+              <input type="text" id="new-note-text" placeholder="Add note (e.g. prefers synthetic oil)..." class="flex-1 bg-[#09090B] border border-zinc-800 rounded-xl px-3 py-1.5 text-xs text-zinc-100">
+              <button onclick="addCustomerNote(${c.id})" class="px-3 py-1.5 bg-orange-600 text-white text-xs font-semibold rounded-xl">+ Add</button>
+            </div>
+            <div id="notes-list" class="space-y-2 max-h-40 overflow-y-auto">
+              ${(data.notes || []).map(n => `
+                <div class="p-2.5 bg-[#09090B] rounded-xl border border-zinc-800/60 flex justify-between text-xs">
+                  <span class="text-zinc-300">${n.text}</span>
+                  <button onclick="deleteCustomerNote(${c.id}, ${n.id})" class="text-zinc-500 hover:text-rose-400">✕</button>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        </div>
+
+      </div>`;
+  } catch(err) {
+    toast('Error loading customer 360', 'err');
+  }
+}
+
+async function addCustomerNote(custId) {
+  const input = document.getElementById('new-note-text');
+  const text = (input?.value || '').trim();
+  if (!text) return;
+
+  try {
+    await api('POST', `/api/customers/${custId}/notes/`, { text });
+    toast('Note added', 'success');
+    pgCustomerDetail(custId);
+  } catch(e) {
+    toast('Error adding note', 'err');
+  }
+}
+
+async function deleteCustomerNote(custId, noteId) {
+  try {
+    await api('DELETE', `/api/customers/${custId}/notes/${noteId}/`);
+    toast('Note deleted', 'ok');
+    pgCustomerDetail(custId);
+  } catch(e) {
+    toast('Error deleting note', 'err');
+  }
+}
+
+async function triggerWhatsAppDraft(custId) {
+  try {
+    const res = await api('GET', `/api/ocr/customers/${custId}/whatsapp-draft/`);
+    if (res.whatsapp_url) {
+      window.open(res.whatsapp_url, '_blank');
+      toast('Opened WhatsApp draft!', 'success');
+    } else {
+      toast('Customer mobile number missing', 'warn');
+    }
+  } catch(e) {
+    toast('Failed to generate draft', 'err');
+  }
+}
+
+async function pgCustomerForm(id) {
+  const el = document.getElementById('content');
+  const isEdit = Boolean(id);
+  let c = { name: '', mobile: '', address: '', email: '' };
+
+  if (isEdit) {
+    try { c = await api('GET', `/api/customers/${id}/`); }
+    catch(e) { toast('Error loading customer', 'err'); return; }
+  }
 
   el.innerHTML = `
-    <div class="page-header">
-      <div>
-        <h1>${id ? `Edit ${c.name}` : 'New Customer'}</h1>
-        <div class="sub">${id ? 'Update customer details' : 'Add a new customer'}</div>
-      </div>
-      <div class="page-header-actions">
-        <button class="btn btn-secondary" onclick="go('/customers')">
-          <svg viewBox="0 0 24 24"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
-          Back
-        </button>
-      </div>
-    </div>
+    <div class="card-elevation max-w-lg mx-auto p-6 lg:p-8 space-y-6">
+      <h2 class="text-lg font-bold text-white">${isEdit ? 'Edit Customer' : 'Register New Customer'}</h2>
+      
+      <form onsubmit="handleCustomerFormSubmit(event, ${isEdit ? c.id : 'null'})" class="space-y-4">
+        <div>
+          <label class="block text-[10px] font-bold uppercase text-zinc-400 mb-1">Customer Name *</label>
+          <input type="text" name="name" value="${c.name || ''}" required class="w-full bg-[#09090B] border border-zinc-800 rounded-xl px-3.5 py-2 text-xs text-zinc-100">
+        </div>
 
-    <div class="card" style="max-width:620px">
-      <div class="card-header"><span class="card-title">Customer Details</span></div>
-      <div class="card-body">
-        <form id="cust-form" novalidate>
-          <div class="form-grid">
-            <div class="form-group">
-              <label class="form-label">Name <span class="req">*</span></label>
-              <input name="name" class="form-input" required
-                placeholder="Customer / Company Name" value="${c.name || ''}">
-            </div>
-            <div class="form-group">
-              <label class="form-label">Mobile</label>
-              <input name="mobile" class="form-input"
-                placeholder="Mobile number" value="${c.mobile || ''}">
-            </div>
-          </div>
-          <div class="form-group" style="margin-top:14px">
-            <label class="form-label">Address / City</label>
-            <input name="address" class="form-input"
-              placeholder="City / Address" value="${c.address || ''}">
-          </div>
-          <div class="form-group" style="margin-top:14px">
-            <label class="form-label">Email</label>
-            <input name="email" type="email" class="form-input"
-              placeholder="Email (optional)" value="${c.email || ''}">
-          </div>
+        <div>
+          <label class="block text-[10px] font-bold uppercase text-zinc-400 mb-1">Mobile Number</label>
+          <input type="text" name="mobile" value="${c.mobile || ''}" class="w-full bg-[#09090B] border border-zinc-800 rounded-xl px-3.5 py-2 text-xs text-zinc-100 font-mono">
+        </div>
 
-          <div style="display:flex;gap:10px;margin-top:22px;flex-wrap:wrap">
-            <button type="submit" id="cust-submit" class="btn btn-primary">
-              <svg viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
-                <polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/>
-              </svg>
-              ${id ? 'Update' : 'Add'} Customer
-            </button>
-            ${id ? `
-              <button type="button" class="btn btn-danger" onclick="deleteCustomer(${id})">
-                <svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/>
-                  <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
-                </svg>
-                Delete
-              </button>` : ''}
-          </div>
-        </form>
-      </div>
+        <div>
+          <label class="block text-[10px] font-bold uppercase text-zinc-400 mb-1">Address / Location</label>
+          <input type="text" name="address" value="${c.address || ''}" class="w-full bg-[#09090B] border border-zinc-800 rounded-xl px-3.5 py-2 text-xs text-zinc-100">
+        </div>
+
+        <div>
+          <label class="block text-[10px] font-bold uppercase text-zinc-400 mb-1">Email Address</label>
+          <input type="email" name="email" value="${c.email || ''}" class="w-full bg-[#09090B] border border-zinc-800 rounded-xl px-3.5 py-2 text-xs text-zinc-100 font-mono">
+        </div>
+
+        <div class="flex items-center justify-end gap-3 pt-4 border-t border-zinc-800">
+          <button type="button" onclick="go('/customers')" class="px-4 py-2 bg-zinc-900 text-zinc-300 border border-zinc-800 rounded-xl text-xs">Cancel</button>
+          <button type="submit" class="px-5 py-2 bg-orange-600 hover:bg-orange-500 text-white rounded-xl text-xs font-semibold shadow-md">Save Customer</button>
+        </div>
+      </form>
     </div>`;
-
-  document.getElementById('cust-form').addEventListener('submit', async e => {
-    e.preventDefault();
-    const btn = document.getElementById('cust-submit');
-    btn.disabled = true;
-    const orig = btn.innerHTML;
-    btn.innerHTML = '<span style="opacity:.6">Saving\u2026</span>';
-    const f = e.target;
-    const payload = {
-      name:    f.querySelector('[name=name]').value.trim(),
-      mobile:  f.querySelector('[name=mobile]').value.trim(),
-      address: f.querySelector('[name=address]').value.trim(),
-      email:   f.querySelector('[name=email]').value.trim(),
-    };
-    try {
-      if (id) {
-        await api('PUT', `/api/customers/${id}/`, payload);
-        toast('Customer updated!');
-      } else {
-        await api('POST', '/api/customers/', payload);
-        toast('Customer added!');
-      }
-      go('/customers');
-    } catch (err) {
-      btn.disabled = false;
-      btn.innerHTML = orig;
-      const msg = (err && (err.detail || Object.values(err).flat().join(' '))) || 'Save failed.';
-      toast(msg, 'error');
-    }
-  });
 }
 
-/* ── Delete helpers (called from onclick) ──────────────────────────────── */
-window.deleteInvoice = async (id) => {
-  if (!confirm('Delete this invoice? This cannot be undone.')) return;
-  try {
-    await api('DELETE', `/api/invoices/${id}/`);
-    toast('Invoice deleted.');
-    go('/invoices');
-  } catch (e) {
-    toast((e && e.detail) || 'Delete failed.', 'error');
-  }
-};
+async function handleCustomerFormSubmit(e, id) {
+  e.preventDefault();
+  const f = e.target;
+  const payload = {
+    name: f.name.value.trim(),
+    mobile: f.mobile.value.trim(),
+    address: f.address.value.trim(),
+    email: f.email.value.trim()
+  };
 
-window.deleteCustomer = async (id) => {
-  if (!confirm('Delete this customer?\n\nCustomers with existing invoices cannot be deleted.')) return;
   try {
-    await api('DELETE', `/api/customers/${id}/`);
-    toast('Customer deleted.');
+    const method = id ? 'PUT' : 'POST';
+    const url = id ? `/api/customers/${id}/` : '/api/customers/';
+    await api(method, url, payload);
+    toast('✓ Customer saved', 'success');
     go('/customers');
-  } catch (e) {
-    toast((e && e.detail) || 'Cannot delete — customer may have existing invoices.', 'error');
+  } catch(e) {
+    toast('Error saving customer', 'err');
   }
-};
+}
+
+
+/* ══════════════════════════════════════════════════════════════════════════
+   PHASE 6: WORKERS DIRECTORY, WORKER 360 & DAILY WORK LOGS
+══════════════════════════════════════════════════════════════════════════ */
+
+let _workerRoleFilter = 'all';
+
+async function pgWorkerList() {
+  const el = document.getElementById('content');
+  
+  try {
+    const qParam = new URLSearchParams(location.search).get('q') || '';
+    let url = '/api/workers/';
+    const params = [];
+    if (qParam) params.push(`q=${encodeURIComponent(qParam)}`);
+    if (_workerRoleFilter && _workerRoleFilter !== 'all') params.push(`role=${encodeURIComponent(_workerRoleFilter)}`);
+    if (params.length) url += '?' + params.join('&');
+
+    const workers = await api('GET', url);
+    const logs = await api('GET', `/api/work-logs/?date_from=${todayISO()}`);
+    
+    const activeWorkers = workers.filter(w => w.is_active);
+    const totalWagesToday = logs.reduce((acc, l) => acc + parseFloat(l.wages || 0), 0);
+
+    const roles = ['all', 'Mechanic', 'Helper', 'Painter', 'Electrician', 'Detailer', 'Other'];
+
+    el.innerHTML = `
+      <div class="space-y-6">
+        
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h1 class="text-2xl font-bold text-white tracking-tight">Workers Directory</h1>
+            <p class="text-xs text-zinc-400 mt-1">Manage workshop technicians, roles, daily job logs, and wages</p>
+          </div>
+          
+          <div class="flex items-center gap-3">
+            <button onclick="openQuickWorkLogModal()" class="px-4 py-2.5 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 hover:border-orange-500/40 text-xs text-zinc-200 rounded-xl font-medium transition-all flex items-center gap-2">
+              <svg class="w-4 h-4 text-orange-400 stroke-current fill-none" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+              <span>+ Quick Log Work</span>
+            </button>
+            
+            <button onclick="go('/workers/new')" class="px-4 py-2.5 bg-orange-600 hover:bg-orange-500 text-white rounded-xl text-xs font-semibold shadow-lg shadow-orange-600/20 flex items-center gap-2 transition-all">
+              <svg class="w-4 h-4 stroke-current fill-none" stroke-width="2.5" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>
+              <span>+ Add Worker</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <div class="card-elevation p-4">
+            <span class="text-[10px] font-bold uppercase tracking-wider text-zinc-400">Total Registered</span>
+            <div class="text-xl font-bold text-white font-mono tabular-nums mt-1">${workers.length}</div>
+          </div>
+          <div class="card-elevation p-4">
+            <span class="text-[10px] font-bold uppercase tracking-wider text-emerald-400">Active Mechanics</span>
+            <div class="text-xl font-bold text-emerald-400 font-mono tabular-nums mt-1">${activeWorkers.length}</div>
+          </div>
+          <div class="card-elevation p-4">
+            <span class="text-[10px] font-bold uppercase tracking-wider text-zinc-400">Jobs Logged Today</span>
+            <div class="text-xl font-bold text-zinc-100 font-mono tabular-nums mt-1">${logs.length}</div>
+          </div>
+          <div class="card-elevation p-4">
+            <span class="text-[10px] font-bold uppercase tracking-wider text-amber-400">Today's Wages Payout</span>
+            <div class="text-xl font-bold text-amber-400 font-mono tabular-nums mt-1">${fmtK(totalWagesToday)}</div>
+          </div>
+        </div>
+
+        <div class="card-elevation p-4 space-y-4">
+          <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
+            <div class="relative flex-1">
+              <svg class="w-4 h-4 text-zinc-500 absolute left-3.5 top-1/2 -translate-y-1/2 stroke-current fill-none" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              <input id="worker-search-input" value="${qParam}" placeholder="Search worker by name, mobile, role..." class="w-full bg-[#09090B] border border-zinc-800 rounded-xl pl-10 pr-4 py-2 text-xs text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-orange-500 transition-all">
+            </div>
+
+            <div class="flex items-center gap-2">
+              <button onclick="go('/workers/logs')" class="px-3.5 py-2 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-xs text-zinc-300 rounded-xl font-medium flex items-center gap-1.5">
+                <svg class="w-3.5 h-3.5 text-orange-400 stroke-current fill-none" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                <span>View All Work Logs →</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="flex gap-2 overflow-x-auto pb-1 no-scrollbar border-t border-zinc-800/60 pt-3">
+            ${roles.map(r => `
+              <button onclick="setWorkerRoleFilter('${r}')" class="px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
+                _workerRoleFilter === r 
+                  ? 'bg-orange-500/20 text-orange-400 border border-orange-500/40 shadow-sm' 
+                  : 'bg-zinc-900 text-zinc-400 border border-zinc-800 hover:text-zinc-200'
+              }">
+                ${r === 'all' ? 'All Roles' : r}
+              </button>
+            `).join('')}
+          </div>
+        </div>
+
+        <div class="card-elevation overflow-hidden">
+          ${workers.length === 0 ? `
+            <div class="p-12 text-center space-y-3">
+              <p class="text-sm font-semibold text-zinc-300">No workers found matching criteria.</p>
+              <button onclick="go('/workers/new')" class="px-4 py-2 bg-orange-600 text-white rounded-xl text-xs font-medium">+ Add Worker</button>
+            </div>
+          ` : `
+            <div class="overflow-x-auto">
+              <table class="w-full text-left border-collapse text-xs">
+                <thead class="bg-[#0E0E11] text-[10px] uppercase font-bold tracking-wider text-zinc-400 border-b border-zinc-800">
+                  <tr>
+                    <th class="py-3.5 pl-6">Worker Name</th>
+                    <th class="py-3.5 px-4">Role</th>
+                    <th class="py-3.5 px-4">Mobile</th>
+                    <th class="py-3.5 px-4 text-center">Status</th>
+                    <th class="py-3.5 px-4 text-center">Total Jobs</th>
+                    <th class="py-3.5 px-4 text-right">Total Wages Paid</th>
+                    <th class="py-3.5 pr-6 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-zinc-800/40">
+                  ${workers.map(w => {
+                    const roleBadgeClass = w.role === 'Mechanic' 
+                      ? 'bg-orange-500/10 text-orange-400 border-orange-500/20' 
+                      : w.role === 'Painter' || w.role === 'Electrician'
+                      ? 'bg-amber-500/10 text-amber-400 border-amber-500/20'
+                      : 'bg-zinc-800 text-zinc-300 border-zinc-700';
+
+                    const statusBadge = w.is_active
+                      ? `<span class="px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">Active</span>`
+                      : `<span class="px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-zinc-800 text-zinc-500 border border-zinc-700">Inactive</span>`;
+
+                    return `
+                      <tr class="table-row-hover cursor-pointer" onclick="go('/workers/${w.id}')">
+                        <td class="py-4 pl-6 font-semibold text-zinc-100 hover:text-orange-400 transition-colors">
+                          ${w.name}
+                        </td>
+                        <td class="py-4 px-4">
+                          <span class="px-2.5 py-1 rounded-lg text-[10px] font-semibold border ${roleBadgeClass}">${w.role}</span>
+                        </td>
+                        <td class="py-4 px-4 font-mono text-zinc-400">${w.mobile || '—'}</td>
+                        <td class="py-4 px-4 text-center">${statusBadge}</td>
+                        <td class="py-4 px-4 text-center font-mono font-bold text-zinc-200">${w.work_logs_count || 0}</td>
+                        <td class="py-4 px-4 text-right font-mono font-bold text-orange-400 tabular-nums">${fmt(w.total_wages)}</td>
+                        <td class="py-4 pr-6 text-right" onclick="event.stopPropagation()">
+                          <div class="flex items-center justify-end gap-1.5">
+                            <button onclick="openQuickWorkLogModal(${w.id})" class="px-2.5 py-1 bg-orange-600/10 text-orange-400 border border-orange-500/30 rounded-lg text-[11px] font-medium hover:bg-orange-600/20">+ Log Work</button>
+                            <button onclick="go('/workers/${w.id}')" class="px-2.5 py-1 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 rounded-lg text-[11px] border border-zinc-800">360 View</button>
+                            <button onclick="go('/workers/${w.id}/edit')" class="p-1.5 text-zinc-400 hover:text-orange-400 rounded-lg"><svg class="w-4 h-4 stroke-current fill-none" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 1-2 2v14a2 2 0 0 1 2 2h14a2 2 0 0 1 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+                          </div>
+                        </td>
+                      </tr>
+                    `;
+                  }).join('')}
+                </tbody>
+              </table>
+            </div>
+          `}
+        </div>
+      </div>`;
+
+    let timer;
+    document.getElementById('worker-search-input')?.addEventListener('input', e => {
+      clearTimeout(timer);
+      timer = setTimeout(() => pgWorkerList(), 300);
+    });
+  } catch(err) {
+    toast('Error loading workers directory', 'err');
+  }
+}
+
+function setWorkerRoleFilter(role) {
+  _workerRoleFilter = role;
+  pgWorkerList();
+}
+
+
+async function pgWorkerDetail(id) {
+  const el = document.getElementById('content');
+  
+  try {
+    const data = await api('GET', `/api/workers/${id}/history/`);
+    const w = data.worker;
+    const stats = data.stats;
+
+    const roleBadgeClass = w.role === 'Mechanic' 
+      ? 'bg-orange-500/10 text-orange-400 border-orange-500/20' 
+      : w.role === 'Painter' || w.role === 'Electrician'
+      ? 'bg-amber-500/10 text-amber-400 border-amber-500/20'
+      : 'bg-zinc-800 text-zinc-300 border-zinc-700';
+
+    const statusBadge = w.is_active
+      ? `<span class="px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">Active</span>`
+      : `<span class="px-3 py-1 rounded-full text-xs font-semibold bg-zinc-800 text-zinc-500 border border-zinc-700">Inactive</span>`;
+
+    el.innerHTML = `
+      <div class="space-y-6 max-w-4xl mx-auto">
+        
+        <div class="flex items-center justify-between gap-4">
+          <div class="flex items-center gap-3">
+            <h1 class="text-2xl font-bold text-white tracking-tight">${w.name}</h1>
+            <span class="px-2.5 py-1 rounded-lg text-xs font-semibold border ${roleBadgeClass}">${w.role}</span>
+            ${statusBadge}
+          </div>
+          
+          <div class="flex items-center gap-2">
+            <button onclick="go('/workers')" class="px-3.5 py-2 bg-zinc-900 text-zinc-300 rounded-xl text-xs font-medium">← Back to List</button>
+            <button onclick="openQuickWorkLogModal(${w.id})" class="px-4 py-2 bg-orange-600 hover:bg-orange-500 text-white rounded-xl text-xs font-semibold shadow-md flex items-center gap-1.5">
+              <svg class="w-4 h-4 stroke-current fill-none" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+              <span>+ Log Work for ${w.name.split(' ')[0]}</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <div class="card-elevation p-4">
+            <span class="text-[10px] font-bold uppercase text-zinc-400">Total Jobs Worked</span>
+            <div class="text-xl font-bold text-zinc-100 font-mono tabular-nums mt-1">${stats.job_count}</div>
+          </div>
+          <div class="card-elevation p-4">
+            <span class="text-[10px] font-bold uppercase text-zinc-400">Total Wages Paid</span>
+            <div class="text-xl font-bold text-orange-400 font-mono tabular-nums mt-1">${fmtK(stats.total_wages)}</div>
+          </div>
+          <div class="card-elevation p-4">
+            <span class="text-[10px] font-bold uppercase text-zinc-400">Avg Wage / Job</span>
+            <div class="text-xl font-bold text-zinc-100 font-mono tabular-nums mt-1">${fmtK(stats.avg_wage)}</div>
+          </div>
+          <div class="card-elevation p-4">
+            <span class="text-[10px] font-bold uppercase text-zinc-400">Last Job Date</span>
+            <div class="text-xs font-bold text-zinc-200 font-mono mt-1">${stats.last_date ? fmtDate(stats.last_date) : 'No jobs logged'}</div>
+          </div>
+        </div>
+
+        <div class="card-elevation overflow-hidden">
+          <div class="p-4 border-b border-zinc-800 bg-[#0E0E11] flex justify-between items-center">
+            <h3 class="text-xs font-bold text-zinc-200 uppercase tracking-wider">Work Log History & Wages</h3>
+            <button onclick="openQuickWorkLogModal(${w.id})" class="text-xs font-semibold text-orange-400 hover:underline">+ Record New Log</button>
+          </div>
+
+          ${(data.logs || []).length === 0 ? `
+            <div class="p-12 text-center text-xs text-zinc-500">
+              No work logs recorded for this worker yet.
+            </div>
+          ` : `
+            <div class="overflow-x-auto max-h-[500px] overflow-y-auto">
+              <table class="w-full text-left text-xs border-collapse">
+                <thead class="bg-[#0E0E11] text-[10px] uppercase font-bold text-zinc-400 border-b border-zinc-800 sticky top-0">
+                  <tr>
+                    <th class="py-3 pl-6">Date</th>
+                    <th class="py-3 px-4">Vehicle Info</th>
+                    <th class="py-3 px-4">Work Description</th>
+                    <th class="py-3 px-4 text-center">Invoice #</th>
+                    <th class="py-3 pr-6 text-right">Wages Paid</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-zinc-800/40">
+                  ${data.logs.map(l => `
+                    <tr class="table-row-hover">
+                      <td class="py-3.5 pl-6 font-mono text-zinc-400">${fmtDate(l.date)}</td>
+                      <td class="py-3.5 px-4 font-semibold text-zinc-200">
+                        ${[l.car_number, l.car_model].filter(Boolean).join(' · ') || '—'}
+                      </td>
+                      <td class="py-3.5 px-4 text-zinc-300 max-w-xs truncate">${l.work_description}</td>
+                      <td class="py-3.5 px-4 text-center font-mono font-bold text-orange-400">
+                        ${l.invoice ? `<a href="#/invoices/${l.invoice}" class="hover:underline">${l.invoice_number}</a>` : '—'}
+                      </td>
+                      <td class="py-3.5 pr-6 text-right font-mono font-bold text-orange-400 tabular-nums">${fmt(l.wages)}</td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            </div>
+          `}
+        </div>
+
+      </div>`;
+  } catch(err) {
+    toast('Error loading worker 360 profile', 'err');
+  }
+}
+
+
+async function pgWorkLogList() {
+  const el = document.getElementById('content');
+  
+  try {
+    const logs = await api('GET', '/api/work-logs/');
+    const workers = await api('GET', '/api/workers/');
+
+    const totalWages = logs.reduce((acc, l) => acc + parseFloat(l.wages || 0), 0);
+
+    el.innerHTML = `
+      <div class="space-y-6">
+        
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h1 class="text-2xl font-bold text-white tracking-tight">Daily Work Logs & Payouts</h1>
+            <p class="text-xs text-zinc-400 mt-1">Track worker assignments, vehicle service tasks, and wages</p>
+          </div>
+          
+          <div class="flex items-center gap-3">
+            <button onclick="openQuickWorkLogModal()" class="px-4 py-2.5 bg-orange-600 hover:bg-orange-500 text-white rounded-xl text-xs font-semibold shadow-lg shadow-orange-600/20 flex items-center gap-2 transition-all">
+              <svg class="w-4 h-4 stroke-current fill-none" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              <span>+ Log New Work</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="card-elevation p-5 border-l-4 border-l-orange-500 flex items-center justify-between">
+          <div>
+            <span class="text-[10px] font-bold uppercase tracking-wider text-zinc-400">Total Wages Payout Summary</span>
+            <div class="text-2xl font-black text-orange-400 font-mono tabular-nums mt-0.5">${fmtK(totalWages)}</div>
+          </div>
+          <div class="text-right">
+            <span class="text-xs font-semibold text-zinc-300">${logs.length} Work Entries</span>
+          </div>
+        </div>
+
+        <div class="card-elevation overflow-hidden">
+          ${logs.length === 0 ? `
+            <div class="p-12 text-center space-y-3">
+              <p class="text-sm font-semibold text-zinc-300">No work logs recorded yet.</p>
+              <button onclick="openQuickWorkLogModal()" class="px-4 py-2 bg-orange-600 text-white rounded-xl text-xs font-medium">+ Record Work Entry</button>
+            </div>
+          ` : `
+            <div class="overflow-x-auto max-h-[600px] overflow-y-auto">
+              <table class="w-full text-left text-xs border-collapse">
+                <thead class="bg-[#0E0E11] text-[10px] uppercase font-bold text-zinc-400 border-b border-zinc-800 sticky top-0 z-10">
+                  <tr>
+                    <th class="py-3.5 pl-6">Date</th>
+                    <th class="py-3.5 px-4">Worker</th>
+                    <th class="py-3.5 px-4">Vehicle</th>
+                    <th class="py-3.5 px-4">Work Description</th>
+                    <th class="py-3.5 px-4 text-center">Invoice #</th>
+                    <th class="py-3.5 pr-6 text-right">Wages Paid</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-zinc-800/40">
+                  ${logs.map(l => `
+                    <tr class="table-row-hover">
+                      <td class="py-3.5 pl-6 font-mono text-zinc-400">${fmtDate(l.date)}</td>
+                      <td class="py-3.5 px-4">
+                        <a href="#/workers/${l.worker}" class="font-semibold text-zinc-200 hover:text-orange-400 transition-colors">${l.worker_name}</a>
+                        <span class="ml-1 text-[10px] text-zinc-500">(${l.worker_role})</span>
+                      </td>
+                      <td class="py-3.5 px-4 text-zinc-300 font-mono">
+                        ${[l.car_number, l.car_model].filter(Boolean).join(' · ') || '—'}
+                      </td>
+                      <td class="py-3.5 px-4 text-zinc-300 max-w-sm truncate">${l.work_description}</td>
+                      <td class="py-3.5 px-4 text-center font-mono font-bold text-orange-400">
+                        ${l.invoice ? `<a href="#/invoices/${l.invoice}" class="hover:underline">${l.invoice_number}</a>` : '—'}
+                      </td>
+                      <td class="py-3.5 pr-6 text-right font-mono font-bold text-orange-400 tabular-nums">${fmt(l.wages)}</td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            </div>
+          `}
+        </div>
+
+      </div>`;
+  } catch(err) {
+    toast('Error loading daily work logs', 'err');
+  }
+}
+
+
+async function pgWorkerForm(id) {
+  const el = document.getElementById('content');
+  const isEdit = Boolean(id);
+  let w = { name: '', mobile: '', role: 'Mechanic', is_active: true };
+
+  if (isEdit) {
+    try { w = await api('GET', `/api/workers/${id}/`); }
+    catch(e) { toast('Error loading worker details', 'err'); return; }
+  }
+
+  const roles = ['Mechanic', 'Helper', 'Painter', 'Electrician', 'Detailer', 'Other'];
+
+  el.innerHTML = `
+    <div class="card-elevation max-w-lg mx-auto p-6 lg:p-8 space-y-6">
+      <h2 class="text-lg font-bold text-white">${isEdit ? 'Edit Worker Profile' : 'Register New Worker'}</h2>
+      
+      <form onsubmit="handleWorkerFormSubmit(event, ${isEdit ? w.id : 'null'})" class="space-y-4">
+        <div>
+          <label class="block text-[10px] font-bold uppercase text-zinc-400 mb-1">Worker Name *</label>
+          <input type="text" name="name" value="${w.name || ''}" required class="w-full bg-[#09090B] border border-zinc-800 rounded-xl px-3.5 py-2 text-xs text-zinc-100 focus:border-orange-500 focus:outline-none">
+        </div>
+
+        <div>
+          <label class="block text-[10px] font-bold uppercase text-zinc-400 mb-1">Mobile Number</label>
+          <input type="text" name="mobile" value="${w.mobile || ''}" placeholder="10-digit phone number" class="w-full bg-[#09090B] border border-zinc-800 rounded-xl px-3.5 py-2 text-xs text-zinc-100 font-mono focus:border-orange-500 focus:outline-none">
+        </div>
+
+        <div>
+          <label class="block text-[10px] font-bold uppercase text-zinc-400 mb-1">Role / Designation *</label>
+          <select name="role" required class="w-full bg-[#09090B] border border-zinc-800 rounded-xl px-3 py-2 text-xs text-zinc-100 focus:border-orange-500 focus:outline-none cursor-pointer">
+            ${roles.map(r => `<option value="${r}"${w.role === r ? ' selected' : ''}>${r}</option>`).join('')}
+          </select>
+        </div>
+
+        <div class="flex items-center gap-2 pt-2">
+          <input type="checkbox" id="is_active" name="is_active"${w.is_active ? ' checked' : ''} class="rounded border-zinc-800 text-orange-600 focus:ring-orange-500">
+          <label for="is_active" class="text-xs text-zinc-300 font-medium">Worker is currently active</label>
+        </div>
+
+        <div class="flex items-center justify-end gap-3 pt-4 border-t border-zinc-800">
+          <button type="button" onclick="go('/workers')" class="px-4 py-2 bg-zinc-900 text-zinc-300 border border-zinc-800 rounded-xl text-xs">Cancel</button>
+          <button type="submit" class="px-5 py-2 bg-orange-600 hover:bg-orange-500 text-white rounded-xl text-xs font-semibold shadow-md">Save Worker</button>
+        </div>
+      </form>
+    </div>`;
+}
+
+async function handleWorkerFormSubmit(e, id) {
+  e.preventDefault();
+  const f = e.target;
+  const payload = {
+    name: f.name.value.trim(),
+    mobile: f.mobile.value.trim(),
+    role: f.role.value,
+    is_active: f.is_active.checked
+  };
+
+  try {
+    const method = id ? 'PUT' : 'POST';
+    const url = id ? `/api/workers/${id}/` : '/api/workers/';
+    await api(method, url, payload);
+    toast('✓ Worker profile saved', 'success');
+    go('/workers');
+  } catch(e) {
+    toast('Error saving worker', 'err');
+  }
+}
+
+
+/* Quick Log Modal Functions */
+async function openQuickWorkLogModal(presetWorkerId = null) {
+  const modal = document.getElementById('modal-quick-worklog');
+  const sel = document.getElementById('quick-log-worker');
+  const dateInput = document.getElementById('quick-log-date');
+
+  if (!modal || !sel) return;
+
+  // Auto-default date input to today's local date (client-side new Date()) on new entry open
+  if (dateInput) {
+    dateInput.value = todayISO();
+  }
+
+  try {
+    const workers = await api('GET', '/api/workers/?is_active=true');
+    sel.innerHTML = '<option value="">— Select Worker —</option>' + 
+      workers.map(w => `<option value="${w.id}"${presetWorkerId == w.id ? ' selected' : ''}>${w.name} (${w.role})</option>`).join('');
+
+    modal.classList.remove('hidden');
+  } catch(e) {
+    toast('Error loading workers list', 'err');
+  }
+}
+
+function closeQuickWorkLogModal() {
+  document.getElementById('modal-quick-worklog')?.classList.add('hidden');
+}
+
+async function saveQuickWorkLog() {
+  const workerId = document.getElementById('quick-log-worker').value;
+  const dateVal = document.getElementById('quick-log-date').value;
+  const carNo = document.getElementById('quick-log-car-no').value.trim();
+  const carModel = document.getElementById('quick-log-car-model').value.trim();
+  const desc = document.getElementById('quick-log-desc').value.trim();
+  const wages = parseFloat(document.getElementById('quick-log-wages').value) || 0;
+
+  if (!workerId || !dateVal || !desc) {
+    toast('Worker, date, and description are required.', 'warn');
+    return;
+  }
+
+  const btn = document.getElementById('quick-log-save-btn');
+  btn.disabled = true;
+
+  try {
+    await api('POST', '/api/work-logs/', {
+      worker: parseInt(workerId),
+      date: dateVal,
+      car_number: carNo,
+      car_model: carModel,
+      work_description: desc,
+      wages: wages
+    });
+
+    toast('✓ Work log entry saved!', 'success');
+    closeQuickWorkLogModal();
+    route(); // Refresh active view
+  } catch(e) {
+    toast('Failed to save work log', 'err');
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+
+/* ══════════════════════════════════════════════════════════════════════════
+   PHASE 4 & 5: AI OCR SCANNER & CHATBOT HANDLERS
+══════════════════════════════════════════════════════════════════════════ */
+
+let _ocrResult = null;
+
+function clearOcrImage() {
+  document.getElementById('ocr-preview').classList.add('hidden');
+  document.getElementById('ocr-file-input').value = '';
+  document.getElementById('ocr-extract-btn').disabled = true;
+}
+
+document.getElementById('ocr-file-input')?.addEventListener('change', e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    document.getElementById('ocr-preview-img').src = ev.target.result;
+    document.getElementById('ocr-preview').classList.remove('hidden');
+    document.getElementById('ocr-extract-btn').disabled = false;
+  };
+  reader.readAsDataURL(file);
+});
+
+async function runOcr() {
+  const fileInput = document.getElementById('ocr-file-input');
+  const file = fileInput.files[0];
+  if (!file) return;
+
+  const btn = document.getElementById('ocr-extract-btn');
+  btn.disabled = true;
+  btn.innerHTML = `<span class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span> Extracting with MaxWheel AI...`;
+
+  const fd = new FormData();
+  fd.append('image', file);
+
+  try {
+    const res = await fetch('/api/ocr/scan-invoice/', {
+      method: 'POST',
+      headers: { 'X-CSRFToken': csrf() },
+      body: fd
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'OCR Extraction failed.');
+    
+    _ocrResult = data;
+    showOcrResult(data);
+    toast('✓ Photo extracted successfully!', 'success');
+  } catch (err) {
+    toast(err.message || 'Error processing OCR', 'err');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = `<span>Extract Data with MaxWheel AI</span>`;
+  }
+}
+
+function showOcrResult(data) {
+  const resultSlot = document.getElementById('ocr-step-result');
+  resultSlot.classList.remove('hidden');
+  
+  const confBadge = document.getElementById('ocr-conf-badge');
+  const conf = (data.confidence || 'medium').toLowerCase();
+  confBadge.textContent = `${conf} confidence`;
+  confBadge.className = `text-[10px] font-bold px-2 py-0.5 rounded uppercase ${conf === 'high' ? 'bg-emerald-500/20 text-emerald-300' : 'bg-amber-500/20 text-amber-300'}`;
+
+  const items = data.line_items || [];
+  document.getElementById('ocr-r-items').innerHTML = items.length 
+    ? items.map(i => `<div class="py-1 border-b border-zinc-800/40 flex justify-between"><span>${i.product_name} x${i.quantity}</span><span class="text-orange-400 font-mono">₹${i.rate}</span></div>`).join('')
+    : '<span class="text-zinc-500">No line items extracted.</span>';
+}
+
+function applyOcrToForm() {
+  if (!_ocrResult) return;
+  _draftInvoiceFromOcr = _ocrResult;
+  DrawerManager.close();
+  toast('Invoice form auto-filled from scanned sheet!', 'success');
+  go('/invoices/new');
+}
+
+/* Chatbot Functions */
+const CHAT_SUGGESTIONS = ["Revenue this month?", "Top 5 customers?", "Most sold product?", "Average invoice value?"];
+let _isTyping = false;
+
+document.addEventListener('DOMContentLoaded', () => {
+  const sugg = document.getElementById('chat-suggestions');
+  if (sugg) {
+    CHAT_SUGGESTIONS.forEach(q => {
+      const chip = document.createElement('button');
+      chip.className = 'text-[10px] font-semibold px-3 py-1.5 rounded-full bg-zinc-900 hover:bg-zinc-800 text-zinc-300 border border-zinc-800 hover:border-emerald-500/40 transition-all shrink-0';
+      chip.textContent = q;
+      chip.onclick = () => { document.getElementById('chat-input').value = q; sendChatMessage(); };
+      sugg.appendChild(chip);
+    });
+  }
+  document.getElementById('chat-input')?.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); sendChatMessage(); } });
+});
+
+async function sendChatMessage() {
+  const input = document.getElementById('chat-input');
+  const message = (input.value || '').trim();
+  if (!message || _isTyping) return;
+  input.value = ''; _isTyping = true;
+  
+  renderChatMessage('user', message);
+  showChatTyping(true);
+
+  try {
+    const data = await api('POST', '/api/ocr/chatbot/', { message });
+    showChatTyping(false);
+    renderChatMessage('ai', data.answer || 'No response returned.');
+  } catch(e) {
+    showChatTyping(false);
+    renderChatMessage('ai', 'Sorry, an error occurred while processing your request.');
+  }
+  _isTyping = false;
+}
+
+function renderChatMessage(role, text) {
+  const msgs = document.getElementById('chat-messages');
+  if (!msgs) return;
+  const isUser = role === 'user';
+  const bubble = document.createElement('div');
+  bubble.className = 'flex items-start gap-3 ' + (isUser ? 'justify-end' : 'justify-start');
+  bubble.innerHTML = isUser
+    ? `<div class="bg-orange-600 text-white rounded-2xl rounded-tr-xs p-3 text-xs leading-relaxed max-w-[85%] shadow-sm">${escHtml(text)}</div>`
+    : `<div class="w-7 h-7 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold text-xs shrink-0 border border-emerald-500/30">G</div><div class="bg-[#141419] border border-zinc-800/80 text-zinc-200 rounded-2xl rounded-tl-xs p-3.5 text-xs leading-relaxed max-w-[85%] shadow-sm">${escHtml(text).replace(/\n/g, '<br>')}</div>`;
+  msgs.insertBefore(bubble, document.getElementById('chat-typing'));
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+function escHtml(str) { return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function showChatTyping(show) {
+  const el = document.getElementById('chat-typing');
+  if (el) {
+    if (show) el.classList.remove('hidden');
+    else el.classList.add('hidden');
+  }
+}
 </script>
 
 </body>

@@ -124,10 +124,33 @@ BANK_BRANCH = "Mithakhali"
 BANK_ACCOUNT = "78010200004500"
 BANK_IFSC = "BARB0VJNAVP"
 
+# ── Gemini AI Configuration ───────────────────────────────────────────────────
+# Get your free API key from: https://aistudio.google.com/app/apikey
+# Free tier: Gemini 1.5 Flash — 15 requests/min, 1500 requests/day
+GEMINI_API_KEY = config('GEMINI_API_KEY', default='')
+
+# OCR settings
+OCR_MAX_IMAGE_SIZE_MB = 5                           # Reject images larger than this (MB)
+
+# Model selection — gemini-flash-latest is confirmed working on this account's free tier.
+# It automatically resolves to the latest stable Flash model Google makes available.
+OCR_GEMINI_MODEL = 'models/gemini-flash-latest'     # ✅ Confirmed working
+
+# AI summary cache: how long (seconds) to cache dashboard AI narrative
+AI_SUMMARY_CACHE_SECONDS = 86400        # 24 hours — avoids burning API quota
+
+# ── Twilio WhatsApp Configuration ────────────────────────────────────────────
+# Get credentials from https://console.twilio.com
+# Leave blank to disable WhatsApp notifications gracefully (no errors).
+TWILIO_ACCOUNT_SID  = config('TWILIO_ACCOUNT_SID',  default='')
+TWILIO_AUTH_TOKEN   = config('TWILIO_AUTH_TOKEN',    default='')
+TWILIO_FROM_NUMBER  = config('TWILIO_FROM_NUMBER',   default='')  # e.g. whatsapp:+17372508034
+TWILIO_CONTENT_SID  = config('TWILIO_CONTENT_SID',  default='')  # pre-approved template SID
+
 # Security headers
-SESSION_COOKIE_HTTPONLY = True        # JS can't read session cookie
-SESSION_COOKIE_SAMESITE = 'Lax'      # CSRF protection for session
-CSRF_COOKIE_HTTPONLY = False          # JS needs to read CSRF token (required for SPA)
+SESSION_COOKIE_HTTPONLY = True          # JS can't read session cookie
+SESSION_COOKIE_SAMESITE = 'Lax'        # CSRF protection for session
+CSRF_COOKIE_HTTPONLY = False            # JS needs to read CSRF token (required for SPA)
 CSRF_COOKIE_SAMESITE = 'Lax'
 SECURE_BROWSER_XSS_FILTER = True
 X_FRAME_OPTIONS = 'DENY'

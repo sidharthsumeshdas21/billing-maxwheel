@@ -747,6 +747,8 @@ async function route() {
     } else {
       a.className = 'nav-link flex items-center gap-3 px-3 py-2.5 text-zinc-400 hover:text-white hover:bg-zinc-800/60 rounded-xl transition-all group font-medium text-sm';
     }
+  });
+
   // Update bottom nav active states
   document.querySelectorAll('.bn-item[data-bn]').forEach(a => {
     const r = a.dataset.bn;

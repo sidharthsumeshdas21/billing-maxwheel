@@ -81,6 +81,7 @@ class LineItem(models.Model):
         ('KG', 'KG'),
         ('MTR', 'MTR'),
         ('SET', 'SET'),
+        ('JOB', 'JOB'),
         ('-', '-'),
     ]
 

@@ -153,7 +153,7 @@ Return this exact JSON structure:
 Rules for line_items:
 - Include every row you can see, even if partially legible
 - quantity and rate must be numbers (use 0 if unreadable)
-- unit must be one of exactly: PCS, NOS, LTR, KG, MTR, SET, -
+- unit must be one of exactly: PCS, NOS, LTR, KG, MTR, SET, JOB, -
 - If unit is unclear, use PCS as default
 
 Rules for confidence:
@@ -250,7 +250,7 @@ def scan_invoice(request):
         )
 
     # ── 6. Validate and sanitise extracted data ────────────────────────────
-    valid_units = {'PCS', 'NOS', 'LTR', 'KG', 'MTR', 'SET', '-'}
+    valid_units = {'PCS', 'NOS', 'LTR', 'KG', 'MTR', 'SET', 'JOB', '-'}
 
     line_items = []
     for item in data.get('line_items', []):

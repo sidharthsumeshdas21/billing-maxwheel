@@ -306,8 +306,11 @@ class InvoiceViewSet(viewsets.ModelViewSet):
         })
 
 
+from django.views.decorators.cache import never_cache
+
 # ─── SPA shell ───────────────────────────────────────────────────────────────
 
+@never_cache
 @login_required
 def app_shell(request, *args, **kwargs):
     """Serves the single-page app. All billing UI routing is done client-side."""

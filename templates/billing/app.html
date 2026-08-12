@@ -1059,7 +1059,7 @@ function renderInvoiceListScreen(container, invoices, searchQuery) {
                         ${fmt(inv.total)}
                       </td>
                       <td class="py-4 pr-6 pl-4 text-right" onclick="event.stopPropagation()">
-                        <div class="flex items-center justify-end gap-1">
+          <div class="flex items-center justify-end gap-1">
                           <button onclick="go('/invoices/${inv.id}')" class="p-1.5 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-lg transition-colors" title="View Detail">
                             <svg class="w-4 h-4 stroke-current fill-none" stroke-width="2" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
                           </button>
@@ -1108,82 +1108,84 @@ function toggleSortColumn(col) {
 
 /* ── DASHBOARD VIEW ──────────────────────────────────────────────────────── */
 async function pgDashboard() {
-  const d = await api('GET', '/api/invoices/dashboard/');
   const el = document.getElementById('content');
+  try {
+    const d = await api('GET', '/api/invoices/dashboard/');
+    if (!el) return;
 
-  el.innerHTML = `
-    <div class="space-y-6">
-      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 class="text-2xl font-bold text-white tracking-tight">Dashboard Overview</h1>
-          <p class="text-xs text-zinc-400 mt-1">Financial summary for FY ${d.fy_label}</p>
-        </div>
-        <button onclick="go('/invoices/new')" class="px-4 py-2.5 bg-orange-600 hover:bg-orange-500 text-white rounded-xl text-xs font-semibold shadow-lg shadow-orange-600/20 flex items-center justify-center gap-2 transition-all">
-          <svg class="w-4 h-4 stroke-current fill-none" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          <span>New Invoice</span>
-        </button>
-      </div>
-
-      <div class="card-elevation p-5 border-l-4 border-l-orange-500 relative overflow-hidden">
-        <div class="flex items-center justify-between mb-2">
-          <div class="flex items-center gap-2 text-xs font-semibold text-orange-400">
-            <svg class="w-4 h-4 stroke-current fill-none" stroke-width="2" viewBox="0 0 24 24"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-            <span>MaxWheel AI Business Narrative</span>
+    el.innerHTML = `
+      <div class="space-y-6">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h1 class="text-2xl font-bold text-white tracking-tight">Dashboard Overview</h1>
+            <p class="text-xs text-zinc-400 mt-1">Financial summary for FY ${d.fy_label}</p>
           </div>
-          <span class="text-[9px] font-bold bg-orange-500/20 text-orange-300 px-2 py-0.5 rounded">LIVE</span>
+          <button onclick="go('/invoices/new')" class="px-4 py-2.5 bg-orange-600 hover:bg-orange-500 text-white rounded-xl text-xs font-semibold shadow-lg shadow-orange-600/20 flex items-center justify-center gap-2 transition-all">
+            <svg class="w-4 h-4 stroke-current fill-none" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            <span>New Invoice</span>
+          </button>
         </div>
-        <p id="ai-summary-text" class="text-xs text-zinc-300 leading-relaxed font-medium">Generating financial narrative...</p>
-      </div>
 
-      <div class="grid grid-cols-1 sm:grid-cols-3 gap-5">
-        <div class="card-elevation p-6 space-y-2">
-          <span class="text-[10px] font-bold uppercase tracking-wider text-zinc-400">FY Revenue</span>
-          <div class="text-2xl font-black text-orange-400 font-mono tabular-nums">${fmtK(d.fy_revenue)}</div>
+        <div class="card-elevation p-5 border-l-4 border-l-orange-500 relative overflow-hidden">
+          <div class="flex items-center justify-between mb-2">
+            <div class="flex items-center gap-2 text-xs font-semibold text-orange-400">
+              <svg class="w-4 h-4 stroke-current fill-none" stroke-width="2" viewBox="0 0 24 24"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+              <span>MaxWheel AI Business Narrative</span>
+            </div>
+            <span class="text-[9px] font-bold bg-orange-500/20 text-orange-300 px-2 py-0.5 rounded">LIVE</span>
+          </div>
+          <p id="ai-summary-text" class="text-xs text-zinc-300 leading-relaxed font-medium">Generating financial narrative...</p>
         </div>
-        <div class="card-elevation p-6 space-y-2">
-          <span class="text-[10px] font-bold uppercase tracking-wider text-zinc-400">Total Invoices</span>
-          <div class="text-2xl font-black text-zinc-100 tabular-nums">${d.total_invoices}</div>
-        </div>
-        <div class="card-elevation p-6 space-y-2">
-          <span class="text-[10px] font-bold uppercase tracking-wider text-zinc-400">Registered Customers</span>
-          <div class="text-2xl font-black text-zinc-100 tabular-nums">${d.total_customers}</div>
-        </div>
-      </div>
 
-      <div class="card-elevation p-6 space-y-4">
-        <h3 class="text-xs font-bold text-zinc-200 uppercase tracking-wider">Monthly Revenue Trend</h3>
-        <div class="h-64"><canvas id="rev-chart"></canvas></div>
-      </div>
-
-      <div class="card-elevation overflow-hidden">
-        <div class="p-4 border-b border-zinc-800 bg-[#0E0E11] flex justify-between items-center">
-          <span class="text-xs font-bold text-zinc-200 uppercase tracking-wider">Recent Billing Transactions</span>
-          <button onclick="go('/invoices')" class="text-xs font-medium text-orange-400 hover:underline">View All Invoices →</button>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-5">
+          <div class="card-elevation p-6 space-y-2">
+            <span class="text-[10px] font-bold uppercase tracking-wider text-zinc-400">FY Revenue</span>
+            <div class="text-2xl font-black text-orange-400 font-mono tabular-nums">${fmtK(d.fy_revenue)}</div>
+          </div>
+          <div class="card-elevation p-6 space-y-2">
+            <span class="text-[10px] font-bold uppercase tracking-wider text-zinc-400">Total Invoices</span>
+            <div class="text-2xl font-black text-zinc-100 tabular-nums">${d.total_invoices}</div>
+          </div>
+          <div class="card-elevation p-6 space-y-2">
+            <span class="text-[10px] font-bold uppercase tracking-wider text-zinc-400">Registered Customers</span>
+            <div class="text-2xl font-black text-zinc-100 tabular-nums">${d.total_customers}</div>
+          </div>
         </div>
-        <div class="overflow-x-auto">
-          <table class="w-full text-left text-xs">
-            <thead class="bg-[#0E0E11] text-[10px] uppercase font-bold text-zinc-500 border-b border-zinc-800">
-              <tr>
-                <th class="py-3 pl-6">Invoice #</th>
-                <th class="py-3">Date</th>
-                <th class="py-3">Customer</th>
-                <th class="py-3 text-right pr-6">Amount</th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-zinc-800/40">
-              ${d.recent_invoices.map(inv => `
-                <tr class="table-row-hover cursor-pointer" onclick="go('/invoices/${inv.id}')">
-                  <td class="py-3 pl-6 font-mono font-bold text-orange-400">${inv.invoice_number}</td>
-                  <td class="py-3 text-zinc-400 font-mono">${fmtDate(inv.invoice_date)}</td>
-                  <td class="py-3 text-zinc-200 font-medium">${inv.customer_name}</td>
-                  <td class="py-3 text-right pr-6 font-mono font-bold text-zinc-100">${fmt(inv.total)}</td>
+
+        <div class="card-elevation p-6 space-y-4">
+          <h3 class="text-xs font-bold text-zinc-200 uppercase tracking-wider">Monthly Revenue Trend</h3>
+          <div class="h-64"><canvas id="rev-chart"></canvas></div>
+        </div>
+
+        <div class="card-elevation overflow-hidden">
+          <div class="p-4 border-b border-zinc-800 bg-[#0E0E11] flex justify-between items-center">
+            <span class="text-xs font-bold text-zinc-200 uppercase tracking-wider">Recent Billing Transactions</span>
+            <button onclick="go('/invoices')" class="text-xs font-medium text-orange-400 hover:underline">View All Invoices →</button>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs">
+              <thead class="bg-[#0E0E11] text-[10px] uppercase font-bold text-zinc-500 border-b border-zinc-800">
+                <tr>
+                  <th class="py-3 pl-6">Invoice #</th>
+                  <th class="py-3">Date</th>
+                  <th class="py-3">Customer</th>
+                  <th class="py-3 text-right pr-6">Amount</th>
                 </tr>
-              `).join('')}
-            </tbody>
-          </table>
+              </thead>
+              <tbody class="divide-y divide-zinc-800/40">
+                ${d.recent_invoices.map(inv => `
+                  <tr class="table-row-hover cursor-pointer" onclick="go('/invoices/${inv.id}')">
+                    <td class="py-3 pl-6 font-mono font-bold text-orange-400">${inv.invoice_number}</td>
+                    <td class="py-3 text-zinc-400 font-mono">${fmtDate(inv.invoice_date)}</td>
+                    <td class="py-3 text-zinc-200 font-medium">${inv.customer_name}</td>
+                    <td class="py-3 text-right pr-6 font-mono font-bold text-zinc-100">${fmt(inv.total)}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
         </div>
-      </div>
-    </div>`;
+      </div>`;
 
   const ctx = document.getElementById('rev-chart').getContext('2d');
   _chartInst = new Chart(ctx, {
@@ -1226,6 +1228,23 @@ async function pgDashboard() {
     const summaryEl = document.getElementById('ai-summary-text');
     if (summaryEl) summaryEl.textContent = 'AI summary temporarily unavailable.';
   });
+  } catch (err) {
+    if (el) {
+      el.innerHTML = `
+        <div class="card-elevation p-8 max-w-lg mx-auto my-12 text-center space-y-4">
+          <div class="w-12 h-12 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-400 flex items-center justify-center mx-auto">
+            <svg class="w-6 h-6 stroke-current fill-none" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          </div>
+          <div>
+            <h3 class="text-base font-semibold text-zinc-100">Unable to load Dashboard</h3>
+            <p class="text-xs text-zinc-400 mt-1">${err?.detail || err?.message || 'Server connection failed. Please try again.'}</p>
+          </div>
+          <button onclick="pgDashboard()" class="px-5 py-2.5 bg-orange-600 hover:bg-orange-500 text-white rounded-xl text-xs font-medium transition-all shadow-lg shadow-orange-600/20">
+            Retry Loading
+          </button>
+        </div>`;
+    }
+  }
 }
 
 
@@ -1381,6 +1400,15 @@ async function pgInvoiceForm(id) {
     } else if (_draftInvoiceFromOcr) {
       invoiceData = _draftInvoiceFromOcr;
       _draftInvoiceFromOcr = null;
+      // Fetch next invoice number if OCR result doesn't include one
+      if (!invoiceData.invoice_number) {
+        const nextNumRes = await api('GET', '/api/invoices/next-number/');
+        invoiceData.invoice_number = nextNumRes.next_number || '';
+      }
+      // Default invoice_date to today if OCR result doesn't include one
+      if (!invoiceData.invoice_date) {
+        invoiceData.invoice_date = todayISO();
+      }
     } else {
       const nextNumRes = await api('GET', '/api/invoices/next-number/');
       invoiceData = {
@@ -1424,7 +1452,7 @@ function renderInvoiceFormScreen(container, inv, customers, isEdit) {
           </button>
           <button id="inv-save-btn" type="submit" class="px-5 py-2.5 bg-orange-600 hover:bg-orange-500 text-white rounded-xl text-xs font-semibold shadow-lg shadow-orange-600/20 transition-all flex items-center gap-2">
             <svg class="w-4 h-4 stroke-current fill-none" stroke-width="2" viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
-            <span>Save & Notify WhatsApp</span>
+            <span>Save Invoice</span>
           </button>
         </div>
       </div>
@@ -1549,9 +1577,13 @@ function renderLineItemRow(idx, item) {
       <td class="py-2 px-2 w-24">
         <select name="li_unit" class="w-full bg-[#09090B] border border-zinc-800 rounded-xl px-2 py-2 text-xs text-zinc-200 focus:border-orange-500 focus:outline-none cursor-pointer">
           <option value="PCS"${item.unit === 'PCS' ? ' selected' : ''}>PCS</option>
+          <option value="NOS"${item.unit === 'NOS' ? ' selected' : ''}>NOS</option>
           <option value="LTR"${item.unit === 'LTR' ? ' selected' : ''}>LTR</option>
+          <option value="KG"${item.unit === 'KG' ? ' selected' : ''}>KG</option>
+          <option value="MTR"${item.unit === 'MTR' ? ' selected' : ''}>MTR</option>
           <option value="SET"${item.unit === 'SET' ? ' selected' : ''}>SET</option>
           <option value="JOB"${item.unit === 'JOB' ? ' selected' : ''}>JOB</option>
+          <option value="-"${item.unit === '-' ? ' selected' : ''}>-</option>
         </select>
       </td>
       <td class="py-2 px-2 w-32">
@@ -1661,7 +1693,7 @@ async function handleInvoiceFormSubmit(e, id) {
     go(`/invoices/${res.id}`);
   } catch(err) {
     btn.disabled = false;
-    btn.innerHTML = `<span>Save & Notify WhatsApp</span>`;
+    btn.innerHTML = `<span>Save Invoice</span>`;
     
     if (typeof err === 'object') {
       Object.keys(err).forEach(key => {
